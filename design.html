@@ -103,6 +103,20 @@
 .strip:hover .ph, .clip.skimming .ph { opacity: 1; }
 .clip b { font-weight: 500; letter-spacing: -0.01em; }
 .clip .label { white-space: nowrap; }
+.strip canvas.wv { width: 100%; height: 100%; display: block; }
+.stage-card .sw { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 34%; opacity: .9; }
+.stage-card b span { display: inline-block; animation: wordIn 700ms cubic-bezier(.16,1,.3,1) both; animation-delay: calc(var(--d) * 110ms + 80ms); }
+@keyframes wordIn { from { opacity: 0; transform: translateY(0.35em); filter: blur(6px); } }
+@media (prefers-reduced-motion: reduce) { .stage-card b span { animation: none; } }
+@media (max-width: 600px) {
+  .stage-card { place-content: start center; padding-top: 17%; gap: 6px; }
+  .stage-card b { font-size: clamp(1.7rem, 8vw, 2.4rem); }
+  #cardSpec { display: none; }
+  .stage-card .sw { height: 26%; }
+  #stage .play { width: 40px; height: 40px; min-height: 0; padding: 0; justify-content: center; gap: 0; border-radius: 50%; left: 10px; bottom: 10px; }
+  #stage .play .pl { display: none; }
+  #stage .play svg { width: 14px; height: 14px; margin-left: 2px; }
+}
 .theater-scrim { position: fixed; inset: 0; z-index: 85; background: rgba(5,7,10,.88); opacity: 0; pointer-events: none; }
 .theater-scrim.live { pointer-events: auto; }
 .theater { position: fixed; z-index: 86; left: 0; top: 0; transform-origin: 0 0; border-radius: 14px; overflow: hidden; background: #000; visibility: hidden; will-change: transform; }
@@ -154,7 +168,7 @@
             <div class="stage-frame" id="stageFrame"></div>
             <div class="stage-card" id="stageCard"><span class="label" id="cardKind"></span><b id="cardName"></b><span class="label" id="cardSpec"></span></div>
             <div class="stage-hud"><span class="label" id="hudName"></span><span class="label tc" id="hudTc">00:00:00:00</span></div>
-            <button class="btn play" type="button" id="playBtn"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M7 4.5v15l13-7.5z" fill="currentColor"/></svg>Play with sound</button>
+            <button class="btn play" type="button" id="playBtn" aria-label="Play with sound"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M7 4.5v15l13-7.5z" fill="currentColor"/></svg><span class="pl">Play with sound</span></button>
           </div>
           <div class="timeline" id="timeline" role="list" aria-label="Clips"></div>
         </div>
@@ -307,45 +321,84 @@ addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
   const tc = (sec, fps) => { const f = Math.floor((sec % 1) * Math.round(fps)), s2 = Math.floor(sec); const p = n => String(n).padStart(2, '0'); return `00:${p(Math.floor(s2 / 60))}:${p(s2 % 60)}:${p(f)}`; };
   let cur = 0, idle = 0;
 
+  // a deterministic "audio track" per clip, so clips without frames still have something to skim
+  const WAVES = CLIPS.map(c => {
+    let h = 2166136261; for (const ch of c.key) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+    const rnd = () => { h ^= h << 13; h >>>= 0; h ^= h >>> 17; h ^= h << 5; h >>>= 0; return h / 4294967296; };
+    const n = 96, out = []; let sm = 0.5;
+    for (let k = 0; k < n; k++) {
+      const t = k / (n - 1), env = Math.min(1, t * 5) * (t > 0.88 ? (1 - t) / 0.12 : 1) * (0.55 + 0.45 * Math.sin(t * Math.PI));
+      sm += (rnd() - sm) * 0.55;
+      out.push(Math.max(0.06, env * (0.3 + 0.7 * sm) * (k % 8 === 0 ? 1.25 : 1)));
+    }
+    return out;
+  });
+  function drawWave(cv, i, p, big) {
+    const d = Math.min(2, devicePixelRatio || 1), w = cv.clientWidth, h = cv.clientHeight; if (!w) return;
+    if (cv.width !== Math.round(w * d)) { cv.width = Math.round(w * d); cv.height = Math.round(h * d); }
+    const x = cv.getContext('2d'); x.setTransform(d, 0, 0, d, 0, 0); x.clearRect(0, 0, w, h);
+    const W = WAVES[i], n = W.length, bw = w / n, mid = big ? h : h / 2, t = performance.now() / 1000;
+    for (let k = 0; k < n; k++) {
+      const played = k / n <= p, near = big ? Math.max(0, 1 - Math.abs(k / n - p) * 14) : 0;
+      let a = W[k] * (big ? h * 0.9 : h * 0.42); if (big && !BR.reduce()) a *= 0.82 + 0.18 * Math.sin(t * 6 + k) + near * 0.25;
+      x.fillStyle = played ? '#FF4A3D' : 'rgba(232,234,230,.42)';
+      if (big) x.fillRect(k * bw + bw * 0.2, mid - a, bw * 0.6, a); else x.fillRect(k * bw + bw * 0.2, mid - a, bw * 0.6, a * 2);
+    }
+  }
+
   tl.innerHTML = CLIPS.map((c, i) => {
     const strip = c.frames ? Array.from({ length: 8 }, (_, k) => `<i style="background-image:url(${sprite(c)});background-size:${COLS * 100}% ${ROWS * 100}%;background-position:${pos(Math.round(k * (c.frames - 1) / 7))}"></i>`).join('')
-                           : `<span class="nostrip">${c.kind} · ${Math.round(c.dur)} s</span>`;
+                           : `<canvas class="wv" aria-hidden="true"></canvas>`;
     return `<button class="clip" type="button" role="listitem" data-i="${i}" aria-current="${i === 0}"><span class="strip">${strip}<span class="ph"></span></span><b>${c.name}</b><span class="label">${c.kind} · ${tc(c.dur, c.fps).slice(3, 8)}</span></button>`;
   }).join('');
+  const stageWave = document.createElement('canvas'); stageWave.className = 'sw'; stageWave.setAttribute('aria-hidden', 'true');
+  document.getElementById('stageCard').appendChild(stageWave);
 
-  function show(i, k) {
+  let p = 0, skimming = false, lastTxt = 0;
+  function show(i, frac) {
     const c = CLIPS[i];
     stage.classList.toggle('has-frames', !!c.frames);
-    if (c.frames) { frame.style.backgroundImage = `url(${sprite(c)})`; frame.style.backgroundSize = `${COLS * 100}% ${ROWS * 100}%`; frame.style.backgroundPosition = pos(clamp(k, 0, c.frames - 1)); }
-    document.getElementById('cardKind').textContent = c.kind; document.getElementById('cardName').textContent = c.name; document.getElementById('cardSpec').textContent = c.spec;
+    if (c.frames) { frame.style.backgroundImage = `url(${sprite(c)})`; frame.style.backgroundSize = `${COLS * 100}% ${ROWS * 100}%`; frame.style.backgroundPosition = pos(clamp(Math.floor(frac * c.frames), 0, c.frames - 1)); }
+    else drawWave(stageWave, i, frac, true);
+    tl.querySelectorAll('.clip').forEach((b, j) => { const wv = b.querySelector('canvas.wv'); if (wv) drawWave(wv, j, j === i ? frac : 0, false); });
+    const now = performance.now(); if (now - lastTxt > 60 || skimming) { lastTxt = now; document.getElementById('hudTc').textContent = tc(frac * c.dur, c.fps); }
+  }
+  function card(i) {
+    const c = CLIPS[i];
+    document.getElementById('cardKind').textContent = c.kind; document.getElementById('cardSpec').textContent = c.spec;
+    document.getElementById('cardName').innerHTML = c.name.split(' ').map((w, k) => `<span style="--d:${k}">${w}</span>`).join(' ');
     document.getElementById('hudName').textContent = `${c.name} · ${c.kind}`;
-    document.getElementById('hudTc').textContent = tc(c.frames ? (k + 0.5) / c.frames * c.dur : 0, c.fps);
   }
-  function select(i) {
-    cur = i; [...tl.children].forEach((b, j) => b.setAttribute('aria-current', j === i)); show(i, 0); blip('tick');
-  }
-  // idle: a slow flip-book through the current clip, so the stage is alive without autoplaying video
-  let f = 0;
-  const flip = () => { const c = CLIPS[cur]; if (c.frames && !document.hidden) { f = (f + 1) % c.frames; show(cur, f); } };
-  if (!reduce()) idle = setInterval(flip, 420);
-  show(0, 0);
+  function select(i) { cur = i; p = 0; [...tl.children].forEach((b, j) => b.setAttribute('aria-current', j === i)); card(i); show(i, 0); blip('tick'); }
 
-  // skimming: pointer position over a strip picks the frame, 1:1, with a playhead
+  // one playhead: plays in real time when idle, follows the pointer while skimming
+  let raf = 0, last = 0, visible = true;
+  const loop = now => {
+    const dt = Math.min(0.1, (now - last) / 1000 || 0); last = now;
+    if (!skimming) { p = (p + dt / CLIPS[cur].dur) % 1; show(cur, p); }
+    raf = visible && !document.hidden && !BR.reduce() ? requestAnimationFrame(loop) : 0;
+  };
+  const start = () => { if (!raf && visible && !BR.reduce()) { last = performance.now(); raf = requestAnimationFrame(loop); } };
+  new IntersectionObserver(es => { visible = es[0].isIntersecting; start(); }).observe(stage);
+  document.addEventListener('visibilitychange', start);
+  addEventListener('resize', () => show(cur, p));
+  card(0); show(0, BR.reduce() ? 0.35 : 0); start();
+
+  // skimming: pointer position over a strip moves the playhead 1:1
   [...tl.children].forEach((btn, i) => {
     const strip = btn.querySelector('.strip'), ph = btn.querySelector('.ph');
     let down = null, moved = false;
     const at = e => { const r = strip.getBoundingClientRect(); return clamp((e.clientX - r.left) / r.width, 0, 0.9999); };
     const skim = e => {
-      const c = CLIPS[i], x = at(e); ph.style.left = (x * 100) + '%';
-      if (cur !== i) { cur = i; [...tl.children].forEach((b, j) => b.setAttribute('aria-current', j === i)); }
-      f = Math.floor(x * Math.max(1, c.frames)); show(i, f);
-      if (!c.frames) document.getElementById('hudTc').textContent = tc(x * c.dur, c.fps);
+      const x = at(e); ph.style.left = (x * 100) + '%'; skimming = true;
+      if (cur !== i) { cur = i; [...tl.children].forEach((b, j) => b.setAttribute('aria-current', j === i)); card(i); }
+      p = x; show(i, x);
     };
-    strip.addEventListener('pointermove', e => { if (e.pointerType === 'mouse' || down) { if (down && Math.abs(e.clientX - down) > 8) moved = true; btn.classList.add('skimming'); skim(e); } });
+    strip.addEventListener('pointermove', e => { if (e.pointerType === 'mouse' || down !== null) { if (down !== null && Math.abs(e.clientX - down) > 8) moved = true; btn.classList.add('skimming'); skim(e); } });
     strip.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') { down = e.clientX; moved = false; skim(e); } });
-    const up = () => { down = null; btn.classList.remove('skimming'); };
+    const up = () => { down = null; skimming = false; btn.classList.remove('skimming'); };
     strip.addEventListener('pointerup', up); strip.addEventListener('pointercancel', up);
-    strip.addEventListener('pointerleave', () => btn.classList.remove('skimming'));
+    strip.addEventListener('pointerleave', () => { skimming = false; btn.classList.remove('skimming'); });
     btn.addEventListener('click', () => { if (moved) { moved = false; return; } if (cur !== i) select(i); openTheater(); });
   });
 
