@@ -94,6 +94,7 @@
 .clip { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 14px; align-items: center; width: 100%; text-align: left;
   padding: 8px; border-radius: 12px; border: 1px solid var(--line); background: transparent; cursor: pointer; transition: border-color var(--q), background-color var(--q), transform 100ms ease-out; }
 .clip:active { transform: scale(0.99); }
+.clip.armed::after { content: "Tap again to play ▶"; position: absolute; right: 12px; top: 14px; font-family: var(--f-mono); font-size: .62rem; letter-spacing: .08em; text-transform: uppercase; color: #E8EAE6; background: rgba(5,7,10,.7); padding: 3px 8px; border-radius: 999px; pointer-events: none; }
 .clip[aria-current="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 6%, transparent); }
 .strip { grid-column: 1 / -1; position: relative; height: 54px; border-radius: 6px; overflow: hidden; display: flex; background: #05070A; touch-action: pan-y; }
 .strip i { flex: 1; background-repeat: no-repeat; border-right: 1px solid rgba(0,0,0,.6); }
@@ -392,6 +393,7 @@ addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
     const skim = e => {
       const x = at(e); ph.style.left = (x * 100) + '%'; skimming = true;
       if (cur !== i) { cur = i; [...tl.children].forEach((b, j) => b.setAttribute('aria-current', j === i)); card(i); }
+      if (e.pointerType !== 'mouse') tl.querySelectorAll('.clip').forEach(x => x.classList.toggle('armed', x === btn));
       p = x; show(i, x);
     };
     strip.addEventListener('pointermove', e => { if (e.pointerType === 'mouse' || down !== null) { if (down !== null && Math.abs(e.clientX - down) > 8) moved = true; btn.classList.add('skimming'); skim(e); } });
@@ -399,7 +401,11 @@ addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
     const up = () => { down = null; skimming = false; btn.classList.remove('skimming'); };
     strip.addEventListener('pointerup', up); strip.addEventListener('pointercancel', up);
     strip.addEventListener('pointerleave', () => { skimming = false; btn.classList.remove('skimming'); });
-    btn.addEventListener('click', () => { if (moved) { moved = false; return; } if (cur !== i) select(i); openTheater(); });
+    btn.addEventListener('click', () => {
+      if (moved) { moved = false; return; }
+      if (handheld() && !btn.classList.contains('armed')) { select(i); tl.querySelectorAll('.clip').forEach(x => x.classList.toggle('armed', x === btn)); return; } // first tap previews, second plays
+      if (cur !== i) select(i); openTheater();
+    });
   });
 
   /* theater: grows out of the stage, returns to it */
@@ -411,8 +417,14 @@ addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
     th.style.transform = `translate(${from.left + (to.x - from.left) * p}px, ${from.top + (to.y - from.top) * p}px) scale(${sx + (1 - sx) * p}, ${sy + (1 - sy) * p})`;
     sc.style.opacity = p;
   });
+  const handheld = () => matchMedia('(max-width: 860px), (pointer: coarse)').matches;
   function openTheater() {
-    const c = CLIPS[cur]; from = stage.getBoundingClientRect();
+    const c = CLIPS[cur];
+    if (handheld()) { // phones: Drive's own player (or the Drive app) plays reliably full screen
+      const url = `https://drive.google.com/file/d/${c.id}/view`; blip('tick');
+      const w = window.open(url, '_blank', 'noopener'); if (!w) location.href = url; return;
+    }
+    from = stage.getBoundingClientRect();
     let w = Math.min(innerWidth - 24, 1200), h = w * 9 / 16; if (h > innerHeight - 140) { h = innerHeight - 140; w = h * 16 / 9; }
     to = { w, h, x: (innerWidth - w) / 2, y: (innerHeight - h) / 2 - 24 };
     th.style.width = w + 'px'; th.style.height = h + 'px';
