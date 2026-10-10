@@ -296,9 +296,9 @@ addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
   const { Spring, clamp, blip, reduce } = BR;
   // frames: how many valid frames the skim sprite holds (8 x 5 grid). 0 = no sprite yet, show the title card.
   const CLIPS = [
-    { id: '1CF-ZNC0t41KZQrT5YzaquNeSqGckZm3U', key: 'comingsoon', name: 'Wisdom Waves 1.0', kind: 'Teaser', dur: 26.226, fps: 59.94, spec: '3840×2160 · 59.94 fps · ProRes', frames: 16 },
     { id: '1ABT7R_K3qI5NZxJ0wmZD2TlrJOIJWkj7', key: 'congress', name: 'Congress intro', kind: 'Event opener', dur: 44.086, fps: 23.976, spec: '1920×1080 · 23.976 fps · H.264', frames: 0 },
-    { id: '1H-CukWVwgBnO6VikfzJMCPN96_DsamqH', key: 'daydreamer', name: 'Daydreamer', kind: 'Music edit', dur: 50, fps: 24, spec: '1920×1012 · 24 fps · HEVC', frames: 0 },
+    { id: '1H-CukWVwgBnO6VikfzJMCPN96_DsamqH', key: 'voltcast', name: 'VoltCast 1.0 intro', kind: 'Event intro', dur: 50, fps: 24, spec: '1920×1012 · 24 fps · HEVC', frames: 0 },
+    { id: '1CF-ZNC0t41KZQrT5YzaquNeSqGckZm3U', key: 'comingsoon', name: 'Wisdom Waves 1.0', kind: 'Teaser', dur: 26.226, fps: 59.94, spec: '3840×2160 · 59.94 fps · ProRes', frames: 16 },
   ];
   const COLS = 8, ROWS = 5;
   const stage = document.getElementById('stage'), frame = document.getElementById('stageFrame'), tl = document.getElementById('timeline');
