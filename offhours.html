@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wdth,wght@75..100,400..700&display=swap">
-<link rel="stylesheet" href="assets/site.css?v=20261011j">
+<link rel="stylesheet" href="assets/site.css?v=20261011k">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <meta name="theme-color" content="#0B0E13">
 <meta name="description" content="Banuka Rajapaksha stargazes with his own telescope and manages the SEDS Ruhuna Observation Division: Ad Astra night observation camps, community stargazing, astrophotography and STEM outreach in Sri Lanka.">
@@ -60,7 +60,7 @@
 <script data-goatcounter="https://banuka.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 </head>
 <body>
-<script src="assets/site.js?v=20261011j"></script>
+<script src="assets/site.js?v=20261011k"></script>
 <script>BR.nav('offhours')</script>
 
 <main>
@@ -312,6 +312,7 @@ function paint() {
   while (queue.length && queue[0].t <= ctx.currentTime) {
     const { s } = queue.shift();
     phI.forEach((i, k) => i.classList.toggle('on', k === s));
+    dispatchEvent(new CustomEvent('br-beat', { detail: { s, hits: grid.map((row, r) => row[s].getAttribute('aria-pressed') === 'true' ? ROWS[r] : null).filter(Boolean) } }));
     grid.forEach(row => { const b = row[s]; if (b.getAttribute('aria-pressed') === 'true') { b.classList.add('hit'); setTimeout(() => b.classList.remove('hit'), 110); } });
     document.getElementById('beat').textContent = `96 BPM · beat ${Math.floor(s / 4) + 1}`;
   }
@@ -320,6 +321,7 @@ function paint() {
 document.getElementById('play').addEventListener('click', e => {
   ctx = BR.ac(); if (!ctx) return;
   playing = !playing; e.currentTarget.textContent = playing ? 'Stop' : 'Play';
+  dispatchEvent(new CustomEvent('br-music', { detail: { on: playing, src: 'drums' } }));
   if (playing) { step = 0; queue = []; nextT = ctx.currentTime + 0.06; schedule(); timer = setInterval(schedule, 25); requestAnimationFrame(paint); }
   else { clearInterval(timer); phI.forEach(i => i.classList.remove('on')); document.getElementById('beat').textContent = '96 BPM · 4/4'; }
 });

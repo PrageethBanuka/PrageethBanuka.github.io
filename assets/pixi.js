@@ -69,7 +69,7 @@
   /* ---------- markup + style ---------- */
   const css = document.createElement('style');
   css.textContent = `
-  .pixi { position: fixed; left: 0; top: 0; z-index: 60; width: ${W}px; height: ${H}px; padding: 0; border: 0; background: none; cursor: grab;
+  .pixi { position: fixed; left: 0; top: 0; z-index: 60; transform-origin: 50% 100%; width: ${W}px; height: ${H}px; padding: 0; border: 0; background: none; cursor: grab;
     touch-action: none; -webkit-tap-highlight-color: transparent; transition: opacity var(--h) ease; will-change: transform; }
   .pixi:active { cursor: grabbing; }
   .pixi canvas { width: ${W}px; height: ${H}px; display: block; }
@@ -115,7 +115,8 @@
   const X = new Spring(home(), { damping: 1, response: 0.5 }), Y = new Spring(0), R = new Spring(0, { damping: 0.7, response: 0.3 });
   const lx = new Spring(0, { damping: 0.85, response: 0.3 }), ly = new Spring(0, { damping: 0.85, response: 0.3 });
   const open = new Spring(1, { damping: 1, response: 0.09 }), lid = new Spring(0, { damping: 1, response: 0.25 }), tall = new Spring(1, { damping: 0.6, response: 0.3 });
-  let sawRefill = false, anchor = null, roamAt = 0, mood = 'default', floor = 0, dragging = false, asleep = false, dizzyUntil = 0, lastAct = performance.now(), hidden = false;
+  const B = new Spring(0, { damping: 0.45, response: 0.22 }), Q = new Spring(0, { damping: 0.5, response: 0.24 });
+  let dancing = null, sawRefill = false, jittery = false, anchor = null, roamAt = 0, mood = 'default', floor = 0, dragging = false, asleep = false, dizzyUntil = 0, lastAct = performance.now(), hidden = false;
   Y.set(tucked ? -(H - 11) : 0);
 
   let K = {};
@@ -124,7 +125,7 @@
   /* ---------- draw ---------- */
   let dirty = false, typingOn = false;
   function queue() { if (!dirty) { dirty = true; requestAnimationFrame(paint); } }
-  [X, Y, R, lx, ly, open, lid, tall].forEach(s => s.on(queue));
+  [X, Y, R, lx, ly, open, lid, tall, B, Q].forEach(s => s.on(queue));
   colors(); addEventListener('br-theme', () => requestAnimationFrame(colors));
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', colors);
   const rr = (x, y, w, h, r) => { r = Math.max(0, Math.min(r, w / 2, h / 2)); o.beginPath(); o.roundRect ? o.roundRect(x, y, w, h, r) : o.rect(x, y, w, h); o.fill(); };
@@ -132,8 +133,8 @@
     dirty = false;
     const t = now / 1000, dz = performance.now() < dizzyUntil, walking = !dragging && Math.abs(X.v) > 30;
     const bob = walking && !reduce() ? -Math.abs(Math.sin(t * 9.6)) * 3 : 0;            // little steps, 96 BPM x 3
-    const tx = X.x, ty = floorTop() - floor - Y.x + bob;
-    el.style.transform = `translate(${tx}px, ${ty}px) rotate(${R.x}deg)`;
+    const tx = X.x, ty = floorTop() - floor - Y.x + bob - B.x, sq = clamp(Q.x, -1, 1);
+    el.style.transform = `translate(${tx}px, ${ty}px) rotate(${R.x}deg) scale(${1 + sq * 0.12}, ${1 - sq * 0.16})`;
     zz.style.transform = `translate(${tx + W - 6}px, ${ty - 6}px)`;
     placeBubble(tx, ty);
 
@@ -228,7 +229,7 @@
   }
   const baseMood = () => { const s = slot(); return s.mood && !(s.decaf && caffeinated) ? s.mood : 'default'; };
   function blink(twice) { if (asleep) return; open.to(0, { then: () => open.to(1, { then: () => twice && setTimeout(() => blink(false), 120) }) }); }
-  function sleep() { if (asleep || dragging || tucked) return; asleep = true; hush(); zz.classList.add('on'); lx.to(0); ly.to(0.4); queue(); }
+  function sleep() { if (asleep || dragging || tucked || dancing) return; asleep = true; hush(); zz.classList.add('on'); lx.to(0); ly.to(0.4); queue(); }
   function wake(quiet) {
     if (!asleep) return; asleep = false; zz.classList.remove('on'); feel('surprised', 700); blink(true);
     if (!quiet && Math.random() < 0.5) setTimeout(() => say(SAY.wake), 500);
@@ -267,8 +268,8 @@
     if (Math.abs(f - floor) > 1) { const from = floor; floor = f; Y.set(Y.x + (from - f)); Y.to(tucked ? Y.target : 0, { damping: 0.7, response: 0.4 }); }
     const away = document.body.classList.contains('menu-open') || !!document.querySelector('.intro, .wa.live, .refill');
     const refill = !!document.querySelector('.refill');
-    if (refill && !sawRefill) sawRefill = true;
-    else if (!refill && sawRefill) { sawRefill = false; const was = !caffeinated; caffeinated = true; setTimeout(() => { feel('happy', 1600); hop(16); say(was && slot().decaf ? 'Ahh. Personality loaded. 100%.' : 'Ahh. Better.'); }, 500); }
+    if (refill && !sawRefill) { sawRefill = true; jittery = !!document.querySelector('.refill.jitter'); }
+    else if (!refill && sawRefill) { sawRefill = false; const was = !caffeinated; caffeinated = true; setTimeout(() => { if (jittery) { dizzyUntil = performance.now() + 2200; feel('surprised', 2200); queue(); return say('Too much coffee. I can hear colours.'); } feel('happy', 1600); hop(16); say(was && slot().decaf ? 'Ahh. Personality loaded. 100%.' : 'Ahh. Better.'); }, 500); }
     if (away !== hidden) { hidden = away; el.classList.toggle('away', away); if (away) hush(); }
   }
   setInterval(perch, 400);
@@ -277,7 +278,7 @@
   const SPOTS = 'h1, h2, .h2, .h3, .btn, .chip, figure img, .frame, canvas, .clip, .card, .sig-xl';
   const kind = n => n.matches('img, .frame, figure img, .clip') ? 'img' : n.matches('canvas') ? 'canvas' : n.matches('.btn') ? 'btn' : n.matches('.chip') ? 'chip' : 'head';
   const sitTop = r => r.top - H + 3;                                                   // eyes peek just over the top edge
-  const usable = n => { if (n.closest('.pixi, .nav, .mmenu, .wa, .vinyl, .m-toast, .intro')) return false; const r = n.getBoundingClientRect(); return r.width >= 40 && r.height >= 14 && r.top > 110 && r.top < innerHeight - H - 90 && r.left > -10 && r.right < innerWidth + 10 && getComputedStyle(n).visibility !== 'hidden'; };
+  const usable = n => { if (n.closest('.pixi, .nav, .mmenu, .wa, .vinyl, .m-toast, .intro')) return false; const r = n.getBoundingClientRect(); return r.width >= 40 && r.height >= 14 && r.top > 80 && r.top < innerHeight - H - 90 && r.left > -10 && r.right < innerWidth + 10 && getComputedStyle(n).visibility !== 'hidden'; };
   function visit(n, why) {
     if (!n || dragging || tucked || hidden || asleep || reduce() || !usable(n)) return false;
     const r = n.getBoundingClientRect(), slot = clamp(r.left + Math.random() * Math.max(0, Math.min(r.width, 400) - W), PAD, maxX());
@@ -295,7 +296,7 @@
     const k = kind(n); lx.to(0); ly.to(k === 'head' ? 0.2 : 0.9);                        // look down at what it's sitting on
     if (k === 'chip' || k === 'btn') nudge(n);
     feel(k === 'btn' ? 'default' : 'happy', 1400);
-    if (why === 'follow' || Math.random() < 0.35) setTimeout(() => anchor && anchor.n === n && muse(AT[k][Math.floor(Math.random() * AT[k].length)]), 700);
+    if (why !== 'end' && (why === 'follow' || Math.random() < 0.35)) setTimeout(() => anchor && anchor.n === n && muse(AT[k][Math.floor(Math.random() * AT[k].length)]), 700);
   }
   function nudge(n) { try { n.animate([{ translate: '0 0' }, { translate: '0 2px' }, { translate: '0 0' }], { duration: 260, easing: 'cubic-bezier(.16,1,.3,1)' }); } catch (e) {} }
   function follow() {                                                                   // content and Pixi move together, 1:1
@@ -382,11 +383,12 @@
   /* ---------- the world around it ---------- */
   function activity() { lastAct = performance.now(); if (asleep) wake(); }
   ['keydown', 'touchstart', 'wheel'].forEach(t => addEventListener(t, activity, { passive: true }));
-  let ly0 = scrollY, lt0 = performance.now(), fastSaid = false, fastN = 0;
+  let ly0 = scrollY, lt0 = performance.now(), fastSaid = false, fastN = 0, handAt = 0;
+  ['wheel', 'touchmove'].forEach(t => addEventListener(t, () => { handAt = performance.now(); }, { passive: true }));   // only a real fling counts, not a scripted scroll
   addEventListener('scroll', () => {
     const now = performance.now(), v = (scrollY - ly0) / Math.max(1, now - lt0) * 1000; ly0 = scrollY; lt0 = now; activity();
     if (!dragging && !asleep && !tucked) ly.to(clamp(v / 3000, -1, 1));
-    fastN = Math.abs(v) > 4500 ? fastN + 1 : 0;                                       // a real fling, not a jump to an anchor
+    fastN = Math.abs(v) > 4500 && now - handAt < 250 ? fastN + 1 : 0;                                       // a real fling, not a jump to an anchor
     if (fastN >= 4 && !fastSaid && !tucked) { fastSaid = true; dizzyUntil = now + 1200; queue(); setTimeout(() => say(SAY.fast, { mood: 'surprised' }), 600); }
   }, { passive: true });
   document.addEventListener('click', e => {
@@ -403,12 +405,108 @@
   });
   addEventListener('resize', () => { X.set(clamp(X.x, PAD, maxX())); queue(); });
 
+
+  /* ---------- micro-interactions ---------- */
+  const kick = (b = 1) => { if (reduce()) return; B.to(0, { velocity: 140 * b }); Q.to(0, { velocity: -7 * b }); };   // impulses: out and back, from wherever it is now
+  const squash = (b = 1) => { if (!reduce()) Q.to(0, { velocity: 9 * b }); };
+
+  // dance: in sync with the drum machine on Off-hours
+  let swing = 1;
+  addEventListener('br-music', e => {
+    if (e.detail.on) { dancing = e.detail.src; wake(true); hush(); feel('happy', 0); if (Math.random() < 0.5) setTimeout(() => say('Ooh. My song.'), 900); }
+    else { dancing = null; R.to(0); lx.to(0); feel(baseMood(), 0); if (Math.random() < 0.4) say('Encore? No? Okay.'); }
+  });
+  addEventListener('br-beat', e => {
+    if (dancing !== 'drums' || dragging || tucked) return;
+    const { s, hits } = e.detail; activity();
+    if (hits.includes('Kick')) { kick(1); }
+    if (hits.includes('Snare')) { swing = -swing; R.to(9 * swing, { velocity: 120 * swing }); squash(0.6); }
+    if (hits.includes('Hi-hat')) open.to(1, { velocity: -6 });
+    if (hits.includes('Clarinet')) ly.to(-0.5, { velocity: -4 });
+    if (s % 4 === 0) lx.to(s % 8 === 0 ? 0.7 : -0.7);
+  });
+  // groove: the Spotify card can't share its beat, so nod along at the site's 96 BPM
+  setInterval(() => {
+    const card = document.querySelector('.vinyl.playing, #studyMix.playing');
+    const vis = card && (() => { const r = card.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight; })();
+    if (vis && dancing !== 'drums') {
+      if (!dancing) { dancing = 'groove'; feel('happy', 0); const r = card.getBoundingClientRect(); if (!anchor && card.classList.contains('vinyl')) walkTo(r.left + r.width / 2 - W / 2); }
+      if (!dragging && !asleep && !tucked) { kick(0.45); swing = -swing; R.to(5 * swing); activity(); }
+    } else if (dancing === 'groove') { dancing = null; R.to(0); feel(baseMood(), 0); }
+  }, 625);
+
+  // clicks: glance at the spot, sometimes blink in sympathy
+  document.addEventListener('pointerdown', e => {
+    if (e.target.closest('.pixi') || dragging || asleep) return;
+    const cx = X.x + W / 2, cy = floorTop() - floor - Y.x + H / 2;
+    lx.to(clamp((e.clientX - cx) / (innerWidth * 0.3), -1, 1), { velocity: 0 }); ly.to(clamp((e.clientY - cy) / (innerHeight * 0.4), -1, 1));
+    if (Math.random() < 0.3) setTimeout(() => blink(), 120);
+  }, { passive: true });
+
+  // the pointer: lean in when it's near, flinch when it rushes in, purr when petted
+  let lastPx = 0, lastPy = 0, lastPt = 0, flinchAt = 0, petT = 0, pettedAt = 0;
+  addEventListener('pointermove', e => {
+    if (e.pointerType === 'touch' || dragging || asleep || tucked) return;
+    const t = performance.now(), dt = Math.max(1, t - lastPt), sp = Math.hypot(e.clientX - lastPx, e.clientY - lastPy) / dt * 1000;
+    lastPx = e.clientX; lastPy = e.clientY; lastPt = t;
+    const cx = X.x + W / 2, cy = floorTop() - floor - Y.x + H / 2, d = Math.hypot(e.clientX - cx, e.clientY - cy);
+    if (d < 110 && sp > 2600 && t - flinchAt > 3000) { flinchAt = t; feel('surprised', 600); squash(1); open.to(1.15, { velocity: 8 }); }
+    else if (d < 140 && !anchor && !dancing) R.to(clamp((e.clientX - cx) / 20, -6, 6));                    // lean toward you
+  }, { passive: true });
+  el.addEventListener('pointerenter', e => {
+    if (e.pointerType === 'touch') return; feel('happy', 0); clearTimeout(petT);
+    petT = setTimeout(() => { if (performance.now() - pettedAt > 20000) { pettedAt = performance.now(); squash(0.5); purr(); say('Petting accepted.', { mood: 'happy' }); } }, 1600);
+  });
+  el.addEventListener('pointerleave', () => { clearTimeout(petT); if (!dancing) { feel(baseMood(), 0); R.to(0); } });
+  function purr() {
+    if (!BR.sound.on) return; const a = BR.ac(); if (!a) return;
+    const t0 = a.currentTime, o = a.createOscillator(), g = a.createGain(), l = a.createOscillator(), lg = a.createGain();
+    o.type = 'triangle'; o.frequency.value = 95; l.frequency.value = 24; lg.gain.value = 0.03; l.connect(lg).connect(g.gain);
+    g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(0.04, t0 + 0.08); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.7);
+    o.connect(g).connect(a.destination); o.start(t0); l.start(t0); o.stop(t0 + 0.75); l.stop(t0 + 0.75);
+  }
+
+  // selecting text: it reads along
+  let selT = 0, selSaid = false;
+  document.addEventListener('selectionchange', () => {
+    clearTimeout(selT);
+    selT = setTimeout(() => {
+      const sel = getSelection(); if (!sel || sel.isCollapsed || String(sel).trim().length < 12 || asleep || tucked) return;
+      const r = sel.getRangeAt(0).getBoundingClientRect(), cx = X.x + W / 2, cy = floorTop() - floor - Y.x;
+      lx.to(clamp((r.left + r.width / 2 - cx) / (innerWidth * 0.3), -1, 1)); ly.to(clamp((r.top - cy) / (innerHeight * 0.4), -1, 1));
+      if (!selSaid && Math.random() < 0.5) { selSaid = true; say('Copying my homework?', { mood: 'happy' }); }
+    }, 500);
+  });
+
+  // window resized: it stumbles
+  let rsT = 0;
+  addEventListener('resize', () => { clearTimeout(rsT); rsT = setTimeout(() => { dizzyUntil = performance.now() + 700; squash(0.8); queue(); }, 120); });
+
+  // made it to the footer: hop onto "Send a signal"
+  const foot = document.querySelector('.transmit .display');
+  if (foot && 'IntersectionObserver' in window) {
+    const io = new IntersectionObserver(es => es.forEach(en => {
+      if (!en.isIntersecting) return; let done = ''; try { done = sessionStorage.getItem('br-pixi-foot') || ''; } catch (e) {}
+      if (done) return io.disconnect();
+      setTimeout(() => { if (visit(foot, 'end')) { try { sessionStorage.setItem('br-pixi-foot', '1'); } catch (e) {} io.disconnect(); setTimeout(() => say('You made it to the end. Say hi?', { mood: 'happy' }), 1300); } }, 700);
+    }), { threshold: 0.9 });
+    io.observe(foot);
+  }
+
+  // little idle habits
+  function yawn() { open.to(0.35, { then: () => { tall.to(1.35, { damping: 1, response: 0.5 }); setTimeout(() => { tall.to(1); open.to(1); }, 900); } }); }
+  function peekOut() {                                                                   // walk to the edge, peek off-screen, come back
+    if (anchor || reduce()) return; const left = X.x + W / 2 < innerWidth / 2, edge = left ? -W * 0.55 : innerWidth - W * 0.45, back = X.x;
+    lx.to(left ? -1 : 1); X.to(edge, { damping: 1, response: 0.8, then: () => setTimeout(() => { if (!dragging && !anchor) { lx.to(left ? 1 : -1); X.to(back, { damping: 1, response: 0.8, then: () => lx.to(0) }); } }, 1400) });
+  }
+  function stretch() { tall.to(1.2, { damping: 0.6, response: 0.4 }); B.to(0, { velocity: 60 }); setTimeout(() => tall.to(1), 700); }
+
   /* ---------- a life of its own ---------- */
   (function blinks() { setTimeout(() => { if (!document.hidden) blink(Math.random() < 0.2); blinks(); }, 2200 + Math.random() * 3800); })();
   (function idle() {
     setTimeout(() => {
       idle();
-      if (document.hidden || dragging || tucked || hidden) return;
+      if (document.hidden || dragging || tucked || hidden || dancing) return;
       const quiet = performance.now() - lastAct;
       if (quiet > (slot().sleepy ? 20000 : 45000)) return sleep();
       if (asleep) return;
@@ -416,6 +514,7 @@
       const r = Math.random();
       if (anchor) { if (r < 0.3) shuffle(); else if (r < 0.5) { drop(); } else if (r < 0.62) visit(roamPick(), 'roam') || lookAround(); else if (r < 0.8) lookAround(); else muse(); return; }
       if (r < 0.14 && performance.now() - roamAt > 15000) { roam(); return; }
+      if (r > 0.94) return (mood === 'tired' ? yawn : Math.random() < 0.5 ? peekOut : stretch)();
       if (r < 0.32) lookAround();
       else if (r < 0.52 && !reduce()) wander();
       else if (r < 0.62) hop(10);
