@@ -39,7 +39,7 @@
 
   /* ---------- auto theme: follow the real sunset in Colombo (unless the visitor chose a theme) ---------- */
   let chosen = null; try { chosen = localStorage.getItem('br-theme'); } catch (e) {}
-  if (!chosen && !root.dataset.mode) {
+  if (!chosen) {
     let iv = 0;
     const apply = () => {
       let c = null; try { c = localStorage.getItem('br-theme'); } catch (e) {}

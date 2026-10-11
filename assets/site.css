@@ -35,12 +35,29 @@
   --line: rgba(232, 234, 230, 0.13); --line-2: rgba(232, 234, 230, 0.06); --accent: #FF4A3D; --data: #3CC2B4;
   --screen: #05070A; color-scheme: dark;
 }
-/* Red-light mode: the Off-hours page, like an observatory at night */
+/* Off-hours page. By day: a printed star atlas, red-black ink on warm paper.
+   At night: red-light mode, like an observatory. Follows the same light/dark switch as the rest of the site. */
 :root[data-mode="redlight"] {
+  --bg: #F3ECE0; --bg-2: #ECE3D3; --surface: #F9F4EB; --ink: #3B0F0B; --ink-2: #6A2C24; --ink-3: #8C4B40;
+  --line: rgba(140, 34, 24, 0.18); --line-2: rgba(140, 34, 24, 0.08); --accent: #B3241B; --data: #B3241B;
+  --screen: #120605; --screen-ink: #FF5A4C; color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-mode="redlight"]:not([data-theme="light"]) {
+    --bg: #0A0606; --bg-2: #120A09; --surface: #160C0B; --ink: #FF5A4C; --ink-2: rgba(255, 90, 76, 0.78); --ink-3: rgba(255, 90, 76, 0.56);
+    --line: rgba(255, 90, 76, 0.2); --line-2: rgba(255, 90, 76, 0.09); --accent: #FF5A4C; --data: #FF5A4C;
+    --screen: #070404; --screen-ink: #FF5A4C; color-scheme: dark;
+  }
+}
+:root[data-mode="redlight"][data-theme="dark"] {
   --bg: #0A0606; --bg-2: #120A09; --surface: #160C0B; --ink: #FF5A4C; --ink-2: rgba(255, 90, 76, 0.78); --ink-3: rgba(255, 90, 76, 0.56);
   --line: rgba(255, 90, 76, 0.2); --line-2: rgba(255, 90, 76, 0.09); --accent: #FF5A4C; --data: #FF5A4C;
   --screen: #070404; --screen-ink: #FF5A4C; color-scheme: dark;
 }
+/* copy that differs between the atlas (day) and red light (night) */
+.when-night { display: none; }
+:root[data-theme="dark"] .when-night { display: inline; } :root[data-theme="dark"] .when-day { display: none; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .when-night { display: inline; } :root:not([data-theme="light"]) .when-day { display: none; } }
 
 @view-transition { navigation: auto; }
 ::view-transition-old(root) { animation: acquire-out var(--h) cubic-bezier(.7, 0, .84, 0) both; }

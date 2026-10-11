@@ -6,7 +6,7 @@
     set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
   };
   const t = store.get('br-theme');
-  if (t && !root.dataset.mode) root.dataset.theme = t;
+  if (t) root.dataset.theme = t;
 
   const RM = matchMedia('(prefers-reduced-motion: reduce)');
   const reduce = () => RM.matches;
@@ -185,14 +185,14 @@
     intro();
     const links = PAGES.map(([id, href, name], i) =>
       `<li><a href="${href}"${id === page ? ' aria-current="page"' : ''}><span class="n">0${i + 1}</span>${name}</a></li>`).join('');
-    const themeBtn = root.dataset.mode ? '' :
+    const themeBtn =
       `<button class="tool" type="button" data-theme-toggle aria-label="Switch light or dark">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" fill="currentColor"/></svg></button>`;
     const here = (PAGES.find(p => p[0] === page) || [])[2] || '';
     const DESC = { engineering: 'Six live projects', design: 'Posters and campaigns', experience: 'WSO2, leadership, education', offhours: 'Sky and music, in red light' };
     const mlinks = [['home', 'index.html', 'Index', 'Coffee runs through my circuits'], ...PAGES.map(([id, href, name]) => [id, href, name, DESC[id]])]
       .map(([id, href, name, d], i) => `<li><a href="${href}"${id === page ? ' aria-current="page"' : ''}><span class="n">0${i}</span><b>${name}</b><small>${d}</small><span class="go" aria-hidden="true">→</span></a></li>`).join('');
-    const mTheme = root.dataset.mode ? '' : `<button class="pill" type="button" data-theme-toggle><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" fill="currentColor"/></svg>Light / dark</button>`;
+    const mTheme = `<button class="pill" type="button" data-theme-toggle><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" fill="currentColor"/></svg>Light / dark</button>`;
     const html = `<header class="nav"><div class="wrap nav-in">
       <a class="brand" href="index.html" aria-label="Banuka Rajapaksha, home">${MARK(opts.draw)}<span>Banuka Rajapaksha</span></a>
       <ul class="nav-links">${links}</ul>

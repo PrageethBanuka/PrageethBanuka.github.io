@@ -3,17 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Off-hours · Banuka Rajapaksha</title>
+<title>Stargazing, astrophotography and music · Banuka Rajapaksha</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wdth,wght@75..100,400..700&display=swap">
-<link rel="stylesheet" href="assets/site.css?v=20261011h">
+<link rel="stylesheet" href="assets/site.css?v=20261011i">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <meta name="theme-color" content="#0B0E13">
-<meta name="description" content="Banuka Rajapaksha: computer engineer and designer in Colombo. Software Engineer Intern at WSO2 (OpenChoreo). Coffee runs through my circuits.">
-<meta property="og:title" content="Banuka Rajapaksha">
-<meta property="og:description" content="Computer engineer and designer. Coffee runs through my circuits.">
-<meta property="og:url" content="https://prageethbanuka.github.io/">
+<meta name="description" content="Banuka Rajapaksha stargazes with his own telescope and manages the SEDS Ruhuna Observation Division: Ad Astra night observation camps, community stargazing, astrophotography and STEM outreach in Sri Lanka.">
+<link rel="canonical" href="https://prageethbanuka.github.io/offhours.html">
+<meta property="og:title" content="Off-hours: stargazing and astrophotography · Banuka Rajapaksha">
+<meta property="og:description" content="Clear nights with my telescope, Ad Astra observation camps at SEDS Ruhuna, astrophotography and music.">
+<meta property="og:url" content="https://prageethbanuka.github.io/offhours.html">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://prageethbanuka.github.io/assets/og.jpg">
 <meta property="og:image:width" content="1200">
@@ -59,17 +60,17 @@
 <script data-goatcounter="https://banuka.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 </head>
 <body>
-<script src="assets/site.js?v=20261011h"></script>
+<script src="assets/site.js?v=20261011i"></script>
 <script>BR.nav('offhours')</script>
 
 <main>
   <section class="wrap page-head">
     <div class="grid">
-      <div class="hang"><span class="label">04 · Off-hours</span><br><span class="label">Red-light mode</span></div>
+      <div class="hang"><span class="label">04 · Off-hours</span><br><span class="label"><span class="when-day">Star-atlas mode</span><span class="when-night">Red-light mode</span></span></div>
       <div class="main">
         <div class="meta-row"><span class="label">Telescopium · Lyra</span><span class="label">6.7951° N · 79.9008° E</span></div>
-        <h1 class="display">After hours, the lights go red<span class="dot">.</span></h1>
-        <p class="lede">Astronomers work under <mark class="hl">red light</mark> to keep their night vision. So does this page.</p>
+        <h1 class="display"><span class="when-day">By day, the star atlas</span><span class="when-night">After hours, the lights go red</span><span class="dot">.</span></h1>
+        <p class="lede"><span class="when-day">In daylight this page is a printed <mark class="hl">star chart</mark>. After sunset in Colombo it switches to red light, the way astronomers keep their night vision.</span><span class="when-night">Astronomers work under <mark class="hl">red light</mark> to keep their night vision. So does this page.</span></p>
       </div>
     </div>
   </section>
@@ -107,7 +108,7 @@
         <figure class="redphoto"><div class="frame"><img src="assets/moon.webp" alt="Two exposures of the Moon photographed by Banuka at Hapugala, Galle" width="675" height="900"></div><figcaption class="label">Hapugala, Galle · 15 Oct 2024 · 23:08</figcaption></figure>
         <div>
           <h2 class="h2" id="ap-h">Running the night shift</h2>
-          <p class="prose" style="margin-top:14px">I manage the Observation Division at SEDS Ruhuna. We run the "Ad Astra" night observation camps and community stargazing meetups, look after the chapter's telescopes and mounts, and teach members to observe and photograph the sky.</p>
+          <p class="prose" style="margin-top:14px">On most clear nights I’m out stargazing with my own telescope. I also manage the Observation Division at SEDS Ruhuna. We run the "Ad Astra" night observation camps and community stargazing meetups, look after the chapter's telescopes and mounts, and teach members to observe and photograph the sky.</p>
           <p class="prose m-hide">It started at school: seven years in the Astronomical and Space Science Society at Ranabima Royal College.</p>
           <div class="chips" style="margin-top:18px"><span class="chip">Ad Astra camps</span><span class="chip">Telescopes and mounts</span><span class="chip">Astrophotography</span><span class="chip">STEM outreach</span></div>
         </div>
@@ -199,6 +200,8 @@ function moon(ms) {
 const cv = document.getElementById('sky'), c = cv.getContext('2d'), tip = document.getElementById('tip');
 let size = 0, DPR = 1, offset = 0, pts = [], secretPt = null;
 addEventListener('br-secret-ready', () => draw());
+addEventListener('br-theme', () => requestAnimationFrame(() => draw()));
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => draw());
 const col = () => { const s = getComputedStyle(document.documentElement); return { ink: s.getPropertyValue('--ink').trim(), line: s.getPropertyValue('--line').trim(), ink3: s.getPropertyValue('--ink-3').trim(), bg: s.getPropertyValue('--bg').trim() }; };
 function resize() { DPR = Math.min(2, devicePixelRatio || 1); size = cv.clientWidth; cv.width = size * DPR; cv.height = size * DPR; c.setTransform(DPR, 0, 0, DPR, 0, 0); draw(); }
 function proj(alt, az) { const R = size / 2 - 26, r = R * (90 - alt) / 90, a = az * rad; return [size / 2 - r * Math.sin(a), size / 2 - r * Math.cos(a)]; }
