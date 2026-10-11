@@ -25,6 +25,7 @@
 @media (max-width: 860px) { .feats { grid-template-columns: 1fr; gap: 0; } .feats article { padding-block: 16px 20px; } .feats article + article { border-top-color: var(--line); } }
 .code { position: relative; margin: 14px 0 0; padding: 16px 52px 16px 18px; border-radius: 14px; background: var(--screen); color: var(--screen-ink);
   font: 0.82rem/1.6 var(--f-mono); overflow-x: auto; white-space: pre; }
+@media (max-width: 700px) { .code { white-space: pre-wrap; overflow-wrap: anywhere; } }   /* phones: wrap instead of sliding under the copy button */
 .code .tool { position: absolute; top: 8px; right: 8px; color: inherit; border-color: color-mix(in srgb, var(--screen-ink) 20%, transparent); }
 .lic { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
 .lic article { border: 1px solid var(--line); border-radius: 18px; padding: 22px; display: grid; gap: 10px; align-content: start; }
