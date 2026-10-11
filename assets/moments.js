@@ -84,7 +84,7 @@
   /* ---------- shared pieces ---------- */
   const css = document.createElement('style');
   css.textContent = `
-  .m-layer { position: fixed; inset: 0; z-index: 45; pointer-events: none; }
+  .m-layer { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 45; pointer-events: none; }
   .m-toast { position: fixed; z-index: 70; left: 16px; bottom: calc(env(safe-area-inset-bottom, 0px) + 16px); max-width: min(420px, calc(100% - 32px));
     display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: start; padding: 14px 10px 14px 16px; border-radius: 18px;
     background: color-mix(in srgb, var(--bg) 78%, transparent); color: var(--ink); border: 1px solid var(--line);

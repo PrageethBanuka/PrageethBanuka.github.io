@@ -96,7 +96,7 @@
   .pixi-say .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   @media (prefers-reduced-transparency: reduce) { .pixi-say { background: var(--bg); backdrop-filter: none; -webkit-backdrop-filter: none; } }
   @media (prefers-reduced-motion: reduce) { .pixi-z.on { animation: none; opacity: .8; } }
-  .pixi-fx { position: fixed; inset: 0; z-index: 59; pointer-events: none; }
+  .pixi-fx { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 59; pointer-events: none; }
   .pixi-shadow { position: fixed; left: 0; top: 0; z-index: 58; width: ${W * 0.8}px; height: 8px; border-radius: 50%; pointer-events: none;
     background: radial-gradient(closest-side, rgba(0,0,0,.22), transparent); transform-origin: 50% 50%; opacity: 0; }
   ${EMBED ? '' : '.dot { display: inline-block; }'}

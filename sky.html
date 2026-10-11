@@ -7,11 +7,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wdth,wght@75..100,400..700&display=swap">
-<link rel="stylesheet" href="assets/site.css?v=20261011v">
+<link rel="stylesheet" href="assets/site.css?v=20261011w">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="canonical" href="https://prageethbanuka.github.io/sky.html">
 <meta name="theme-color" content="#0B0E13">
-<meta name="description" content="A star map of the exact sky over any Sri Lankan town on the night that matters to you. Made by Banuka Rajapaksha, an astronomer at SEDS Ruhuna. Order on WhatsApp.">
+<meta name="description" content="A star map of the exact sky over any Sri Lankan town on the night that matters to you. Free for now. Made by Banuka Rajapaksha at SEDS Ruhuna; request yours on WhatsApp.">
 <meta property="og:title" content="Your sky, printed">
 <meta property="og:description" content="The real sky over Sri Lanka on the night that matters to you, as a minimal star map.">
 <meta property="og:url" content="https://prageethbanuka.github.io/sky.html">
@@ -35,6 +35,7 @@ select.in { appearance: none; background-image: linear-gradient(45deg, transpare
 .seg button { font: inherit; font-size: .9rem; border: 0; background: transparent; color: var(--ink-2); padding: 8px 14px; border-radius: 999px; cursor: pointer; min-height: 36px; }
 .seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
 .seg button:active { transform: scale(.96); }
+.seg button:disabled { color: var(--ink-3); opacity: .55; cursor: not-allowed; transform: none; }
 .acts { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .price { color: var(--ink-3); }
 .fine { color: var(--ink-3); font-size: .85rem; max-width: 52ch; }
@@ -43,7 +44,7 @@ select.in { appearance: none; background-image: linear-gradient(45deg, transpare
 <script data-goatcounter="https://banuka.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 </head>
 <body>
-<script src="assets/site.js?v=20261011v"></script>
+<script src="assets/site.js?v=20261011w"></script>
 <script>BR.nav('offhours')</script>
 
 <main>
@@ -79,14 +80,14 @@ select.in { appearance: none; background-image: linear-gradient(45deg, transpare
           <div class="field"><span class="label">Details</span>
             <div class="seg" role="group" aria-label="Details" id="opts"><button type="button" data-k="lines" aria-pressed="true">Constellations</button><button type="button" data-k="grid" aria-pressed="true">Grid</button><button type="button" data-k="moon" aria-pressed="true">Moon</button></div></div>
           <div class="field"><span class="label">Format</span>
-            <div class="seg" role="group" aria-label="Format" id="fmt"><button type="button" data-v="Digital file (print-ready, A3)" aria-pressed="true">Digital file</button><button type="button" data-v="Printed poster (delivered in Sri Lanka)" aria-pressed="false">Printed</button></div></div>
+            <div class="seg" role="group" aria-label="Format" id="fmt"><button type="button" data-v="Digital file (print-ready, A3)" aria-pressed="true">Digital file</button><button type="button" disabled aria-disabled="true" title="Printed posters are coming soon">Printed · soon</button></div></div>
           <div class="acts">
-            <button class="btn" type="button" id="order"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 12a8 8 0 0 1-11.6 7.1L4 20l1-4.2A8 8 0 1 1 20 12z"/></svg>Order on WhatsApp</button>
+            <button class="btn" type="button" id="order"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 12a8 8 0 0 1-11.6 7.1L4 20l1-4.2A8 8 0 1 1 20 12z"/></svg>Get it on WhatsApp</button>
             <button class="btn ghost" type="button" id="dl">Download preview</button>
-            <span class="label price" id="price"></span>
+            <span class="label price" id="price">Free for now</span>
           </div>
           <div class="acts studio" id="studio"><button class="btn" type="button" id="hires">Export print file · 3600×4800</button><span class="label">Studio</span></div>
-          <p class="fine">WhatsApp opens with your choices filled in. I'll confirm the price and payment there, then send the print-ready file. The free preview is low resolution and watermarked.</p>
+          <p class="fine">Digital star maps are free for now. WhatsApp opens with your choices filled in, and I'll send the print-ready file there. The free preview is low resolution and watermarked. Printed posters are coming soon.</p>
           <p class="fine">Star positions: d3-celestial catalogue © 2015 Olaf Frohn (<a href="assets/sky-data.LICENSE.txt">BSD licence</a>).</p>
         </form>
       </div>
@@ -196,8 +197,8 @@ function draw(g, W, H, wm) {
 const seg = (id, fn) => $(id).addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; fn(b); blip('tick'); kick(); });
 seg('style', b => { style = b.dataset.v; $('style').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b)); });
 seg('opts', b => { opt[b.dataset.k] = !opt[b.dataset.k]; b.setAttribute('aria-pressed', opt[b.dataset.k]); });
-seg('fmt', b => { fmt = b.dataset.v; $('fmt').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b)); });
-setTimeout(() => { const price = BR.shop && BR.shop.skyPrice; if (price) $('price').textContent = price; }, 900);   // the shop config loads after this page script
+seg('fmt', b => { if (b.disabled) return; fmt = b.dataset.v; $('fmt').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b)); });
+setTimeout(() => { const price = BR.shop && BR.shop.skyPrice; $('price').textContent = price || 'Free for now'; }, 900);   // the shop config loads after this page script; no price = free
 
 // the poster leans toward the pointer a little, like a print held in your hand
 if (matchMedia('(hover: hover) and (pointer: fine)').matches && !reduce()) {
@@ -212,7 +213,7 @@ function save(canvas, name) { canvas.toBlob(b => { const a = document.createElem
 const slug = () => `${PLACES[+P.value][0].toLowerCase().replace(/\s+/g, '-')}-${$('d').value}`;
 $('dl').addEventListener('click', () => { save(render(2 / 3, true), `star-map-preview-${slug()}.png`); dispatchEvent(new CustomEvent('br-activity', { detail: { id: 'offer', icon: '✓', text: 'Preview downloaded' } })); });
 $('order').addEventListener('click', () => {
-  const pl = PLACES[+P.value], msg = `Hi Banuka! I'd like a star map ✨\n\nTitle: ${$('ttl').value.trim() || 'Under these stars'}\n${$('sub').value.trim() ? 'Line: ' + $('sub').value.trim() + '\n' : ''}Place: ${pl[0]}\nDate: ${$('d').value}, ${$('t').value}\nStyle: ${style}${opt.lines ? ' · constellations' : ''}${opt.grid ? ' · grid' : ''}${opt.moon ? ' · moon' : ''}\nFormat: ${fmt}`;
+  const pl = PLACES[+P.value], msg = `Hi Banuka! I'd like my free star map ✨\n\nTitle: ${$('ttl').value.trim() || 'Under these stars'}\n${$('sub').value.trim() ? 'Line: ' + $('sub').value.trim() + '\n' : ''}Place: ${pl[0]}\nDate: ${$('d').value}, ${$('t').value}\nStyle: ${style}${opt.lines ? ' · constellations' : ''}${opt.grid ? ' · grid' : ''}${opt.moon ? ' · moon' : ''}\nFormat: ${fmt}`;
   open(`https://wa.me/${WA}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener');
 });
 // studio: my own print exports, behind a passphrase (open sky.html#studio)

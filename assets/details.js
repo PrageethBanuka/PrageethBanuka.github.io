@@ -12,7 +12,7 @@
   .tilt .sheen { position: absolute; inset: 0; pointer-events: none; opacity: 0; mix-blend-mode: soft-light; transition: opacity .3s ease;
     background: radial-gradient(circle at var(--sx, 50%) var(--sy, 0%), rgba(255,255,255,.55), rgba(255,255,255,0) 55%); }
   .tilt:hover .sheen { opacity: 1; }
-  .visit-sky { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+  .visit-sky { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
   .transmit { position: relative; } .transmit > .wrap { position: relative; z-index: 1; }
   .visit-note { opacity: 0; transition: opacity .6s ease; } .visit-note.on { opacity: 1; }
   @media print {

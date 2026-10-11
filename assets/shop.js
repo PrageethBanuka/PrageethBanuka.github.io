@@ -8,7 +8,7 @@
     prints: '',      // print-on-demand or download store for the Moon photographs
     pixi: '',        // Gumroad / Lemon Squeezy product for the Pixi licence
     pixiPrice: '',   // e.g. '$19'
-    skyPrice: '',    // star map poster price shown next to the WhatsApp button, e.g. 'LKR 2,500'
+    skyPrice: '',    // star map price next to the WhatsApp button, e.g. 'LKR 2,500'; empty shows 'Free for now'
   };
   /* ======================================= */
 
