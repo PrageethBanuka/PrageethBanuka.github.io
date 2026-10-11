@@ -126,7 +126,7 @@
   Y.set(tucked ? -(H - 11) : 0);
 
   let K = {};
-  const colors = () => { const s = getComputedStyle(root); K = { ink: s.getPropertyValue('--ink').trim() || '#0B0E13', line: s.getPropertyValue('--ink-3').trim() || '#636B78', red: s.getPropertyValue('--accent').trim() || '#D62F24' }; queue(); };
+  const colors = () => { const s = getComputedStyle(root); K = { ink: s.getPropertyValue('--ink').trim() || '#0B0E13', line: s.getPropertyValue('--ink-3').trim() || '#636B78', red: s.getPropertyValue('--accent').trim() || '#D62F24', scr: s.getPropertyValue('--screen-ink').trim() || '#E8EAE6' }; queue(); };
 
   /* ---------- draw ---------- */
   let tx_ = { vel: () => 0 }, ty_ = { vel: () => 0 }, dirty = false, typingOn = false, cells = [], ghostN = 0, hang = null, hiddenFx = false;
@@ -405,6 +405,7 @@
   function tap() {
     if (tucked) { untuck(); return; }
     if (asleep) { wake(true); setTimeout(() => say(SAY.wake), 400); return; }
+    if (offerDraw) { hush(); return void drawPortrait(); }
     const now = performance.now();
     if (pokes.length && now - pokes[pokes.length - 1] < 320 && !reduce()) { pokes.push(now); hush(); return flip(); }   // double tap: backflip
     pokes = pokes.filter(t => now - t < 2500); pokes.push(now);
@@ -661,6 +662,7 @@
     if (typed.endsWith('pixi')) { typed = ''; wake(true); hop(16); feel('love', 1600); quip('That’s me!', null, 1, 'name', true); }
     else if (typed.endsWith('dance')) { typed = ''; wake(true); let n = 0; const iv = setInterval(() => { kick(0.8); swing = -swing; R.to(10 * swing); if (++n >= 16) { clearInterval(iv); R.to(0); } }, 312); feel('happy', 5200); }
     else if (typed.endsWith('flip')) { typed = ''; flip(); }
+    else if (typed.endsWith('banuka') || typed.endsWith('draw') || typed.endsWith('selfie')) { typed = ''; drawPortrait(); }
     else if (typed.endsWith('sleep')) { typed = ''; setTimeout(sleep, 300); }
     else if (typed.endsWith('hello') || typed.endsWith(' hi')) { typed = ''; waveBye(); quip('Hi! Hello. Hey.', 'happy', 1, 'hello', true); }
   });
@@ -775,6 +777,8 @@
   function surprise() {
     if (reduce() || anchor || run || hang || dragging || tucked || hidden) return lookAround();
     surpriseAt = performance.now(); const r = Math.random();
+    let drew = '1'; try { drew = sessionStorage.getItem('br-pixi-drew') || ''; } catch (e) {}
+    if (r < 0.12 && !drew) { try { sessionStorage.setItem('br-pixi-drew', '1'); } catch (e) {} if (drawPortrait()) return; }
     if (r < 0.28) return perform(Object.keys(ICONS)[Math.floor(Math.random() * 5)]);
     if (r < 0.5) return eatDot() || hangStart();
     if (r < 0.75) return hangStart() || perform('star');
@@ -877,12 +881,173 @@
       setTimeout(() => say('Cheat code accepted. +30 lives.'), 700); }
   });
 
+
+  /* ---------- self-portrait: Pixi plots my photo as a dot grid, row by row ----------
+     44 x 44 brightness levels (0–9) sampled from my headshot; light dots on a small dark screen, like the site's other devices. */
+  const ME = (
+    '00000000000000000000000000000000000000000000' +
+    '00000000000000000000000000000000000000000000' +
+    '00000000000000000000000000000000000000000000' +
+    '00000000000000000000000000000000000000000000' +
+    '00000000000000000000111111100000000000000000' +
+    '00000000000000000000010111110000000000000000' +
+    '00000000000000001111111111110000000000000000' +
+    '00000000000000011111111111110000000000000000' +
+    '00000000000000111100111111111000000000000000' +
+    '00000000000000111012454332111000000000000000' +
+    '00000000000000111256777777311100000000000000' +
+    '00000000000000111567888888511100000000000000' +
+    '00000000000000111567888888611100000000000000' +
+    '00000000000000111567888888731000000000000000' +
+    '00000000000000014556788544651000000000000000' +
+    '00000000000000014432354335543100000000000000' +
+    '00000000000000133432344435755000000000000000' +
+    '00000000000000145655577768874000000000000000' +
+    '00000000000000035677589678863000000000000000' +
+    '00000000000000015677646688862000000000000000' +
+    '00000000000000003667644688720000000000000000' +
+    '00000000000000000465445437610000000000000000' +
+    '00000000000000000254477766410000000000000000' +
+    '00000000000000000134644675200000000000000000' +
+    '00000000000000000113554553510000000000000000' +
+    '00000000000000000341111114651000000000000000' +
+    '00000000000000001554111246661100000000000000' +
+    '00000000000001111646544664951111100000000000' +
+    '00000000001111111956666657941111111100000000' +
+    '00000001111111111994666579931111111111100000' +
+    '00000001111111111997677889921111111111100000' +
+    '00000011111111112888799988911111111111100000' +
+    '00000011111111113899999999711111111111100000' +
+    '00000011111111113999999999611111111111110000' +
+    '00000111111111113999999999411111111111110000' +
+    '00000111111111113999999999211111111111111000' +
+    '00001111111111112999999999111111111111111000' +
+    '00001111111111111999999997111111111111112000' +
+    '00001111111111111999999994111111111111111100' +
+    '00011111111111111899999992111111111111111100' +
+    '00011111111111111799999981111111111111111100' +
+    '00011111111111111599999961111111111111111100' +
+    '00011111111111111399999931111111111111111100' +
+    '00000000000000000000000000000000000000000000'
+  );
+  const PN = 44, PS = 4, PSZ = PN * PS;
+  let portrait = null, offerDraw = false, drewAt = -Infinity;
+  const pcss = document.createElement('style');
+  pcss.textContent = `
+  .pixi-pt { position: fixed; left: 0; top: 0; z-index: 61; margin: 0; padding: 12px 12px 10px; border-radius: 20px; background: var(--screen); color: var(--screen-ink);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--screen-ink) 10%, transparent), 0 24px 60px -24px rgba(0,0,0,.55); opacity: 0; will-change: transform, opacity, filter; }
+  .pixi-pt canvas { width: ${PSZ}px; height: ${PSZ}px; display: block; cursor: crosshair; touch-action: none; }
+  .pixi-pt .cap { display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; font-family: var(--f-mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; opacity: .55; }
+  .pixi-pt .x { position: absolute; top: 4px; right: 4px; width: 32px; height: 32px; border: 0; border-radius: 50%; background: none; color: inherit; opacity: .5; cursor: pointer; display: grid; place-items: center; }
+  .pixi-pt .x:hover { opacity: 1; background: color-mix(in srgb, var(--screen-ink) 12%, transparent); }
+  .pixi-pt .x:active { transform: scale(.92); }
+  @media (pointer: coarse) { .pixi-pt .x { width: 44px; height: 44px; top: -2px; right: -2px; } }
+  @media (prefers-reduced-transparency: reduce) { .pixi-pt { box-shadow: 0 0 0 1px var(--line); } }`;
+  document.head.appendChild(pcss);
+
+  function drawPortrait() {
+    if (portrait || dragging || hang || run || hiddenFx) return false;
+    if (tucked) untuck(); wake(true); hush(); anchor = null; drewAt = performance.now(); offerDraw = false;
+    const card = document.createElement('figure'); card.className = 'pixi-pt';
+    card.innerHTML = `<canvas width="${PSZ * 2}" height="${PSZ * 2}" role="img" aria-label="Self-portrait of Banuka, drawn by Pixi as a grid of dots"></canvas><figcaption class="cap"><span>Self-portrait · Pixi</span><span data-n>0 dots</span></figcaption>
+      <button class="x" type="button" aria-label="Close portrait"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8"/></svg></button>`;
+    document.body.appendChild(card);
+    const pc = card.querySelector('canvas'), g2 = pc.getContext('2d'); g2.scale(2, 2);
+    const cw = PSZ + 24, ch = card.offsetHeight;
+    // the card appears from Pixi: placed above it, on the side with room
+    const px0 = X.x + W / 2, right = px0 > innerWidth / 2;
+    const left = clamp(right ? X.x + W - cw : X.x, 12, innerWidth - cw - 12), top = clamp(floorTop() - floor - Y.x - ch - 30, 84, innerHeight - ch - 12);
+    card.style.transformOrigin = `${clamp(px0 - left, 0, cw)}px ${ch + 30}px`;
+    const S0 = new Spring(0, { damping: 0.9, response: 0.42 }).on(v => {                       // materialize: scale + blur + opacity together
+      card.style.opacity = clamp(v, 0, 1); card.style.filter = v < 0.98 ? `blur(${(1 - clamp(v, 0, 1)) * 8}px)` : '';
+      card.style.transform = `translate(${left}px, ${top}px) scale(${0.6 + 0.4 * v})`; });
+    S0.set(0); S0.to(1);
+    const L = []; let lit = 0;
+    for (let j = 0; j < PN; j++) for (let i = 0; i < PN; i++) { const v = +ME[j * PN + i]; L.push({ i, j, v, at: Infinity, s: 1 }); if (v) lit++; }
+    portrait = { card, L, left, top, cw, ch, S0, mx: -999, my: -999, rip: [], done: false, raf: 0, drawn: 0 };
+    const nEl = card.querySelector('[data-n]');
+    // Pixi hops onto the card's top edge and works across it like a plotter head, row by row, back and forth
+    const sit = () => floorTop() - floor - (top - H + 3);
+    X.to(clamp(left + 12, PAD, maxX()), { damping: 1, response: 0.45 }); Y.to(sit(), { velocity: 500, damping: 0.75, response: 0.45 });
+    feel('happy', 0); ly.to(1);
+    const T0 = performance.now() + (reduce() ? 0 : 600), ROW = reduce() ? 0 : 95;
+    L.forEach(d => { const col = d.j % 2 ? PN - 1 - d.i : d.i; d.at = T0 + d.j * ROW + (col / PN) * ROW; });
+    let lastRow = -1;
+    function frame(t) {
+      if (!portrait || portrait.card !== card) return;
+      g2.clearRect(0, 0, PSZ, PSZ);
+      const p = portrait, row = Math.floor((t - T0) / Math.max(1, ROW));
+      if (!p.done && ROW && row >= 0 && row < PN && row !== lastRow) {                           // move the head to this row's sweep
+        lastRow = row; const fwd = row % 2 === 0, from = left + 12 + (fwd ? 0 : PSZ - W), to = left + 12 + (fwd ? PSZ - W : 0);
+        X.set(clamp(from, PAD, maxX())); X.to(clamp(to, PAD, maxX()), { damping: 1, response: ROW / 1000 * 0.9 }); lx.to(fwd ? 0.8 : -0.8);
+        if (row % 6 === 0) squash(0.15);
+      }
+      let drawn = 0;
+      for (const d of p.L) {
+        const age = t - d.at; if (age < 0) { faint(d); continue; }
+        if (d.v) drawn++;
+        const e = ROW ? Math.min(1, age / 260) : 1, pop = e < 1 ? 1 + 0.6 * Math.sin(e * Math.PI) * (1 - e) : 1;     // each dot pops in with a little overshoot
+        let x = d.i * PS + PS / 2, y = d.j * PS + PS / 2, r = d.v ? 0.45 + 1.45 * d.v / 9 : 0;
+        if (p.done) {                                                                             // the lens: dots swell and lean away from the cursor
+          const dx = x - p.mx, dy = y - p.my, dd = Math.hypot(dx, dy), k = Math.max(0, 1 - dd / 34);
+          d.s += ((1 + 0.9 * k * k) - d.s) * 0.25; if (dd > 0.1) { x += dx / dd * 3.2 * k * k; y += dy / dd * 3.2 * k * k; }
+          for (const q of p.rip) { const rr = (t - q.t) * 0.12, w = Math.abs(Math.hypot(x - q.x, y - q.y) - rr); if (w < 10) d.s += (1 - w / 10) * 0.35 * Math.max(0, 1 - (t - q.t) / 900); }
+        }
+        if (!r) { faint(d, x, y); continue; }
+        g2.globalAlpha = 1; g2.fillStyle = K.scr; g2.beginPath(); g2.arc(x, y, Math.min(PS * 0.62, r * pop * d.s), 0, 6.283); g2.fill();
+      }
+      p.rip = p.rip.filter(q => t - q.t < 900);
+      if (drawn !== p.drawn) { p.drawn = drawn; nEl.textContent = `${drawn.toLocaleString()} dots`; }
+      if (!p.done && t > T0 + PN * ROW + 300) { p.done = true; finish(); }
+      if (p.done && p.sig && t > p.sig) { const e = Math.min(1, (t - p.sig) / 500); g2.fillStyle = K.red; g2.globalAlpha = 1; g2.beginPath(); g2.arc(PSZ - 9, PSZ - 9, 2.6 * (1 + 0.5 * Math.sin(e * Math.PI) * (1 - e)) * e, 0, 6.283); g2.fill(); }
+      p.raf = requestAnimationFrame(frame);
+    }
+    function faint(d, x = d.i * PS + PS / 2, y = d.j * PS + PS / 2) { g2.globalAlpha = 0.12; g2.fillStyle = K.scr; g2.beginPath(); g2.arc(x, y, 0.45, 0, 6.283); g2.fill(); g2.globalAlpha = 1; }
+    function finish() {
+      portrait.sig = performance.now() + 250;                                                   // signs it with the red star
+      lx.to(0); ly.to(0.6); feel('happy', 1600); hop(12); chirp(3);
+      anchor = { n: card, oy: -H + 3, dx: new Spring(X.x - left, { damping: 1, response: 0.9 }).on(queue) };
+      setTimeout(() => say('Drew us. The glasses took the longest.', { mood: 'happy' }), 700);
+      portrait.idle = setTimeout(() => closePortrait(), 22000);
+    }
+    portrait.raf = requestAnimationFrame(frame);
+    const local = e => { const r = pc.getBoundingClientRect(); return [(e.clientX - r.left) * PSZ / r.width, (e.clientY - r.top) * PSZ / r.height]; };
+    const poke = () => { clearTimeout(portrait.idle); portrait.idle = setTimeout(() => closePortrait(), 22000); };
+    pc.addEventListener('pointermove', e => { [portrait.mx, portrait.my] = local(e); poke(); });
+    pc.addEventListener('pointerleave', () => { portrait.mx = portrait.my = -999; });
+    pc.addEventListener('pointerdown', e => { const [x, y] = local(e); portrait.rip.push({ x, y, t: performance.now() }); squash(0.3); poke(); });   // tap: a ripple runs through the dots
+    card.querySelector('.x').addEventListener('click', () => closePortrait());
+    return true;
+  }
+  function closePortrait() {
+    const p = portrait; if (!p) return; portrait = null; clearTimeout(p.idle);
+    if (anchor && anchor.n === p.card) anchor = null;
+    // the dots fly home into Pixi, then the card dematerializes
+    if (!reduce()) {
+      const r = p.card.querySelector('canvas').getBoundingClientRect(), now = performance.now(), hx = X.x + W / 2, hy = floorTop() - floor - Y.x + H / 2;
+      p.L.forEach((d, k) => { if (d.v >= 3 && k % 2 === 0) { const x = r.left + d.i * PS + PS / 2, y = r.top + d.j * PS + PS / 2;
+        emit({ kind: 'path', fx: x, fy: y, tx: hx, ty: hy, cx: (x + hx) / 2 + (Math.random() - 0.5) * 80, cy: Math.min(y, hy) - 40 * Math.random(), r: 0.5 + 1.2 * d.v / 9, dur: 520 + Math.random() * 420, t0: now + (d.j / PN) * 220, fade: true }); } });
+      p.L.forEach(d => { d.v = 0; });
+    }
+    p.S0.to(0, { damping: 1, response: 0.35, then: () => { cancelAnimationFrame(p.raf); p.card.remove(); } });
+    setTimeout(() => { if (!dragging && !anchor) { fall(); squash(0.5); } }, 500);
+  }
+  addEventListener('keydown', e => { if (e.key === 'Escape' && portrait) closePortrait(); });
+  document.addEventListener('pointerdown', e => { if (portrait && portrait.done && !e.target.closest('.pixi-pt, .pixi')) closePortrait(); }, { passive: true });
+  // hover my name for a moment and Pixi offers to draw me; the next tap on Pixi does it
+  let nameT = 0;
+  document.addEventListener('pointerover', e => {
+    const m = e.target.closest && e.target.closest('mark, .brand'); if (!m || !/Banuka/.test(m.textContent + (m.getAttribute('aria-label') || ''))) return;
+    clearTimeout(nameT); nameT = setTimeout(() => { if (!portrait && performance.now() - drewAt > 60000) { offerDraw = true; feel('happy', 1400); hop(8); say('Want a portrait? Tap me.'); } }, 1200);
+  });
+  document.addEventListener('pointerout', e => { if (e.target.closest && e.target.closest('mark, .brand')) clearTimeout(nameT); });
+
   /* ---------- a life of its own ---------- */
   (function blinks() { setTimeout(() => { if (!document.hidden) blink(Math.random() < 0.2); blinks(); }, 2200 + Math.random() * 3800); })();
   (function idle() {
     setTimeout(() => {
       idle();
-      if (document.hidden || dragging || tucked || hidden || dancing || run || hang || hiddenFx) return;
+      if (document.hidden || dragging || tucked || hidden || dancing || run || hang || hiddenFx || (portrait && !portrait.done)) return;
       const quiet = performance.now() - lastAct;
       if (quiet > (slot().sleepy ? 20000 : 45000)) return sleep();
       if (asleep) return;
@@ -911,5 +1076,5 @@
 
   feel(baseMood(), 0); queue();
   setInterval(() => { if (mood === 'default' || mood === 'tired') feel(baseMood(), 0); queue(); }, 60000);
-  window.__pixi = { roam, visit, drop, say, perform, hangStart, eatDot, surprise, teleport, fireworks, sleep };                                        // handy from the console
+  window.__pixi = { drawPortrait, roam, visit, drop, say, perform, hangStart, eatDot, surprise, teleport, fireworks, sleep };                                        // handy from the console
 })();
