@@ -997,13 +997,14 @@
         g2.globalAlpha = 1; g2.fillStyle = K.scr; g2.beginPath(); g2.arc(x, y, Math.min(PS * 0.62, r * pop * d.s), 0, 6.283); g2.fill();
       }
       p.rip = p.rip.filter(q => t - q.t < 900);
-      if (drawn !== p.drawn) { p.drawn = drawn; nEl.textContent = `${drawn.toLocaleString()} dots`; }
+      if (drawn !== p.drawn) { p.drawn = drawn; nEl.textContent = `${drawn.toLocaleString()} dots`; if (!p.done && drawn % 20 === 0) dispatchEvent(new CustomEvent('br-activity', { detail: { id: 'draw', progress: drawn / lit } })); }
       if (!p.done && t > T0 + PN * ROW + 300) { p.done = true; finish(); }
       if (p.done && p.sig && t > p.sig) { const e = Math.min(1, (t - p.sig) / 500); g2.fillStyle = K.red; g2.globalAlpha = 1; g2.beginPath(); g2.arc(PSZ - 9, PSZ - 9, 2.6 * (1 + 0.5 * Math.sin(e * Math.PI) * (1 - e)) * e, 0, 6.283); g2.fill(); }
       p.raf = requestAnimationFrame(frame);
     }
     function faint(d, x = d.i * PS + PS / 2, y = d.j * PS + PS / 2) { g2.globalAlpha = 0.12; g2.fillStyle = K.scr; g2.beginPath(); g2.arc(x, y, 0.45, 0, 6.283); g2.fill(); g2.globalAlpha = 1; }
     function finish() {
+      dispatchEvent(new CustomEvent('br-activity', { detail: { id: 'draw', progress: 1, done: true } }));
       portrait.sig = performance.now() + 250;                                                   // signs it with the red star
       lx.to(0); ly.to(0.6); feel('happy', 1600); hop(12); chirp(3);
       anchor = { n: card, oy: -H + 3, dx: new Spring(X.x - left, { damping: 1, response: 0.9 }).on(queue) };
@@ -1076,5 +1077,6 @@
 
   feel(baseMood(), 0); queue();
   setInterval(() => { if (mood === 'default' || mood === 'tired') feel(baseMood(), 0); queue(); }, 60000);
+  BR.pixi = { center: () => ({ x: X.x + W / 2, y: floorTop() - floor - Y.x + H / 2, held: dragging, away: tucked || hidden || hiddenFx }) };   // for the spacetime grid
   window.__pixi = { drawPortrait, roam, visit, drop, say, perform, hangStart, eatDot, surprise, teleport, fireworks, sleep };                                        // handy from the console
 })();

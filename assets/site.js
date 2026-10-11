@@ -349,7 +349,7 @@
   document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', wire) : wire();
 
   // moments (time-based features) and the hidden trail load on every page
-  ['moments.js', 'secret.js', 'extras.js', 'pixi.js'].forEach(f => { const el = document.createElement('script'); el.src = 'assets/' + f + '?v=20261011o'; document.head.appendChild(el); });
+  ['moments.js', 'secret.js', 'extras.js', 'pixi.js', 'wow.js'].forEach(f => { const el = document.createElement('script'); el.src = 'assets/' + f + '?v=20261011p'; document.head.appendChild(el); });
 
   window.BR = { Spring, project, rubber, clamp, tracker, reduce, RM, blip, sound, ac, noiseBuf, nav, footer, store };
 })();
