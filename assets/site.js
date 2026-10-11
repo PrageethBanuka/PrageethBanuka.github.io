@@ -203,6 +203,8 @@
         ${themeBtn}
       </div>
       ${here ? `<span class="here">${here}</span>` : ''}
+      <button class="tool m-sound" type="button" data-sound-toggle aria-pressed="${sound.on}" aria-label="Interface sound">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9z"/><path class="w" d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/><path class="x" d="M17 10l4 4M21 10l-4 4"/></svg></button>
       <button class="menu-btn" type="button" aria-expanded="false" aria-controls="mmenu" aria-label="Menu"><i></i><i></i></button>
       </div></header>
       <div class="mmenu" id="mmenu" aria-label="Site menu">

@@ -95,11 +95,18 @@
   .m-toast .ic { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); margin-top: 6px; box-shadow: 0 0 12px var(--accent); }
   .m-toast button { border: 0; background: none; color: var(--ink-3); cursor: pointer; width: 32px; height: 32px; border-radius: 50%; }
   .m-toast button:hover { color: var(--ink); background: var(--line); }
-  .steam { position: relative; }
-  .steam::before, .steam::after { content: ""; position: absolute; left: 50%; bottom: 7px; width: 2px; height: 12px; border-radius: 2px; background: var(--ink-3); opacity: 0;
-    animation: steam 2.5s ease-out infinite; }
-  .steam::after { animation-delay: 1.25s; margin-left: 3px; }
-  @keyframes steam { 0% { opacity: 0; transform: translateY(2px) scaleY(.4); } 30% { opacity: .7; } 100% { opacity: 0; transform: translate(3px, -12px) scaleY(1); } }
+  /* morning star: 7–10am the dot rises over the signature like the Sun at dawn, warms red → gold,
+     then glints with diffraction spikes on every fourth heartbeat */
+  .star.dawn { position: relative; --sun: color-mix(in srgb, var(--accent) 45%, #FFB547);
+    background: var(--sun); box-shadow: 0 0 6px 1px color-mix(in srgb, var(--sun) 70%, transparent);
+    animation: sunrise 2.4s var(--ease-out) .5s both, breathe 1.25s ease-in-out 2.9s infinite; }
+  .star.dawn::before, .star.dawn::after { content: ""; position: absolute; left: 50%; top: 50%; width: 15px; height: 1px; margin: -.5px 0 0 -7.5px; border-radius: 1px;
+    background: linear-gradient(90deg, transparent, var(--sun), transparent); transform: scaleX(0); animation: glint 5s ease-out 2.9s infinite; }
+  .star.dawn::after { rotate: 90deg; animation-delay: 2.96s; }
+  .brand:hover .star.dawn::before, .brand:hover .star.dawn::after, .brand:focus-visible .star.dawn::before, .brand:focus-visible .star.dawn::after {
+    animation: none; transform: scaleX(1.3); transition: transform var(--h) var(--ease-out); }
+  @keyframes sunrise { from { translate: 0 9px; opacity: 0; background: #7A1A14; box-shadow: none; } 35% { opacity: 1; } }
+  @keyframes glint { 0%, 70%, 100% { transform: scaleX(0); opacity: 0; } 76% { transform: scaleX(1); opacity: 1; } 90% { transform: scaleX(.2); opacity: 0; } }
   .m-moonglow { position: fixed; z-index: 0; right: -18vmax; top: -18vmax; width: 50vmax; height: 50vmax; border-radius: 50%; pointer-events: none;
     background: radial-gradient(circle, color-mix(in srgb, var(--ink) 16%, transparent) 0%, transparent 62%); }
   .lanterns { position: fixed; z-index: 44; top: 0; right: 4vw; display: flex; gap: clamp(14px, 3vw, 36px); pointer-events: none; }
@@ -107,7 +114,7 @@
   .lantern:nth-child(2) { animation-duration: 5.6s; animation-delay: -1s; } .lantern:nth-child(3) { animation-duration: 4.2s; animation-delay: -2s; }
   @keyframes sway { from { transform: rotate(-4deg); } to { transform: rotate(4deg); } }
   @media (max-width: 700px) { .lanterns { right: 2vw; transform: scale(.7); transform-origin: top right; } }
-  @media (prefers-reduced-motion: reduce) { .lantern, .steam::before, .steam::after { animation: none; } .m-toast { transition: none; } }
+  @media (prefers-reduced-motion: reduce) { .lantern, .star.dawn, .star.dawn::before, .star.dawn::after { animation: none; } .star.dawn::before, .star.dawn::after { transform: scaleX(.7); opacity: .6; } .m-toast { transition: none; } }
   body { transition: background-color 1.2s ease, color 1.2s ease; }`;
   document.head.appendChild(css);
 
@@ -245,7 +252,7 @@
     }
     if (on.has('newyear')) { if (!still) setTimeout(() => burst(), 900); toast('newyear', 'Happy New Year', 'A new orbit begins. Thanks for stopping by.', { prio: 100 }); }
     if (on.has('birthday')) { if (!still) setTimeout(() => burst(innerWidth / 2, innerHeight / 3, 140), 900); toast('birthday', 'Today', 'It’s my birthday. One more trip around the Sun.', { prio: 100 }); }
-    if (on.has('coffee')) { document.querySelectorAll('.brand .star').forEach(s => s.classList.add('steam')); BR.clockSuffix = BR.clockSuffix || ' · brewing ☕'; }
+    if (on.has('coffee')) { document.querySelectorAll('.brand .star').forEach(s => s.classList.add('dawn')); BR.clockSuffix = BR.clockSuffix || ' · brewing ☕'; }
     if (on.has('latenight')) BR.clockSuffix = BR.clockSuffix || ' · probably stargazing';
     if (on.has('spaceweek')) toast('spaceweek', 'World Space Week', 'It runs 4 to 10 October. Fitting, for a site that turns into a night sky.', { prio: 40, once: 'season' });
     if (on.has('xtreme')) toast('xtreme', 'On this day, 2024', 'IEEEXtreme 18.0: #418 in the world, #22 in Sri Lanka, in 24 hours straight.', { prio: 80 });
