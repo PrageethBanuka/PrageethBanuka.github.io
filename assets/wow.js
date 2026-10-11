@@ -11,13 +11,17 @@
   .st { position: absolute; inset: 0; z-index: 0; pointer-events: none; width: 100%; height: 100%;
     -webkit-mask: radial-gradient(120% 90% at 50% 45%, #000 55%, transparent 100%); mask: radial-gradient(120% 90% at 50% 45%, #000 55%, transparent 100%); }
   .hero { position: relative; } .hero > .grid { position: relative; z-index: 1; }
-  .isl { position: fixed; z-index: 55; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 74px); translate: -50% 0; height: 36px; width: 36px; border-radius: 999px;
+  .isl { position: fixed; z-index: 55; left: 0; top: 0; height: 36px; width: 36px; border-radius: 999px;
     background: #050607; color: #F2F3F1; overflow: hidden; display: none; cursor: default; touch-action: none; user-select: none; -webkit-user-select: none;
     box-shadow: 0 0 0 1px rgba(255,255,255,.07), 0 14px 34px -14px rgba(0,0,0,.6); font-size: 13px; letter-spacing: .01em; }
-  @media (max-width: 860px) { .isl { top: calc(env(safe-area-inset-top, 0px) + 66px); } }
   .isl.live { display: block; }
-  .isl-in { position: absolute; inset: 0; display: flex; align-items: center; gap: 10px; padding: 0 14px; white-space: nowrap; transition: opacity .2s ease, filter .2s ease, scale .2s ease; }
-  .isl-in.out { opacity: 0; filter: blur(6px); scale: .94; }
+  .isl-in { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 0 14px; white-space: nowrap; transition: opacity .16s ease, filter .16s ease, scale .16s ease; }
+  .isl-in.out { opacity: 0; filter: blur(6px); scale: .94; transition-duration: .1s; }
+  .isl-in > span:not(.mono):not(.eq):not(.ring) { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .isl-in > .mono, .isl-in > svg, .isl-in > .eq, .isl-in > .ring { flex: none; }
+  .isl .spin { animation: ispin .6s cubic-bezier(.34,1.56,.64,1) both; } @keyframes ispin { from { rotate: -140deg; scale: .3; } }
+  .nav .brand > span:last-child { transition: opacity .2s ease; } body.isl-on .nav .brand > span:last-child, body.isl-on .nav .clock { opacity: 0; } .nav .clock { transition: opacity .2s ease; }
+  @media (min-width: 861px) { body.isl-on .nav .brand > span:last-child { opacity: 1; } }
   .isl-in.x { flex-direction: column; align-items: stretch; justify-content: center; gap: 10px; padding: 14px 18px; }
   .isl .mono { font-family: var(--f-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; opacity: .6; }
   .isl .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
@@ -111,8 +115,34 @@
   const sr = document.createElement('div'); sr.className = 'isl-sr'; sr.setAttribute('role', 'status'); sr.setAttribute('aria-live', 'polite');
   document.body.append(isl, sr);
   const IW = new Spring(36, { damping: 0.82, response: 0.4 }), IH = new Spring(36, { damping: 0.82, response: 0.4 }), IO = new Spring(0, { damping: 1, response: 0.3 });
-  const paint = () => { isl.style.width = IW.x + 'px'; isl.style.height = IH.x + 'px'; isl.style.borderRadius = Math.min(IH.x / 2, 28) + 'px'; isl.style.opacity = IO.x; isl.style.scale = 0.85 + 0.15 * IO.x; };
-  [IW, IH, IO].forEach(s => s.on(paint));
+  // it lives in the nav: desktop, in the gap between the links and the clock; phones, where my name is (the name steps aside)
+  let A = { cx: innerWidth / 2, top: 74, max: 340, left: 0, align: 'center' }, dragY = 0, pend = null;
+  const PS = new Spring(1, { damping: 0.7, response: 0.25 });
+  function anchor() {
+    const nav = document.querySelector('.nav'), nb = nav && nav.getBoundingClientRect();
+    if (!nb) return (A = { cx: innerWidth / 2, top: 74, max: innerWidth - 32, align: 'center' });
+    const top = nb.top + (nb.height - 36) / 2;
+    if (innerWidth <= 860) {
+      const name = nav.querySelector('.brand > span:last-child'), tool = nav.querySelector('.m-sound') || nav.querySelector('.menu-btn');
+      if (name && tool) { const L = name.getBoundingClientRect().left, R = tool.getBoundingClientRect().left - 10; return (A = { left: L, max: Math.max(120, R - L), top, align: 'left' }); }
+    } else {
+      const lk = nav.querySelector('.nav-links'), tl = nav.querySelector('.nav-tools .tool') || nav.querySelector('.nav-tools');   // the clock steps aside too
+      if (lk && tl) { const L = lk.getBoundingClientRect().right + 14, R = tl.getBoundingClientRect().left - 14; if (R - L >= 140) return (A = { cx: (L + R) / 2, max: R - L, top, align: 'center' }); }
+    }
+    return (A = { cx: innerWidth / 2, top: nb.bottom + 10, max: Math.min(340, innerWidth - 32), align: 'center' });   // no room in the bar: float just below it
+  }
+  const paint = () => {
+    const w = IW.x, h = IH.x, wide = w > A.max + 1;
+    let left = A.align === 'left' && !wide ? A.left : (A.align === 'left' ? A.left + A.max / 2 : A.cx) - w / 2;
+    left = clamp(left, 8, innerWidth - w - 8);
+    isl.style.left = left + 'px'; isl.style.top = A.top + 'px'; isl.style.translate = `0 ${dragY}px`;
+    isl.style.width = w + 'px'; isl.style.height = h + 'px'; isl.style.borderRadius = Math.min(h / 2, 26) + 'px';
+    isl.style.opacity = IO.x; isl.style.scale = (0.85 + 0.15 * IO.x) * PS.x;
+    // new content only appears once the pill has (nearly) reached its size, so text never spills or overlaps
+    if (pend && performance.now() - pend.t > 90 && Math.abs(w - pend.w) < pend.w * 0.12 + 4 && Math.abs(h - pend.h) < pend.h * 0.12 + 4) { pend.n.classList.remove('out'); pend = null; }
+  };
+  [IW, IH, IO, PS].forEach(s => s.on(paint));
+  addEventListener('resize', () => { anchor(); if (cur) render(); else paint(); });
   const acts = new Map(); let cur = null, expanded = false, ttlT = 0;
   const ICON = {
     sound: on => `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 9v6h4l5 4V5L8 9z"/>${on ? '<path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/>' : '<path d="M17 10l4 4M21 10l-4 4"/>'}</svg>`,
@@ -125,33 +155,45 @@
   function clear(id) { acts.delete(id); pick(); }
   function pick() {
     const list = [...acts.values()].sort((a, b) => (b.prio || 0) - (a.prio || 0)), next = list[0] || null;
-    if (!next) { cur = null; expanded = false; IO.to(0, { then: () => { if (!cur) isl.classList.remove('live'); } }); IW.to(36); IH.to(36); return; }
+    if (!next) {
+      cur = null; expanded = false; pend = null; document.body.classList.remove('isl-on');
+      isl.querySelectorAll('.isl-in').forEach(n => n.classList.add('out'));
+      IO.to(0, { then: () => { if (!cur) { isl.classList.remove('live'); isl.querySelectorAll('.isl-in').forEach(n => n.remove()); } } }); IW.to(36); IH.to(36); return;
+    }
     const changed = !cur || cur.id !== next.id || cur.html !== next.html; cur = next;
     if (changed) render(); if (next.say && next.say !== sr.textContent) sr.textContent = next.say;
     clearTimeout(ttlT); if (next.ttl) ttlT = setTimeout(() => clear(next.id), next.ttl);
   }
   function render() {
-    isl.classList.add('live'); const x = expanded && cur.xhtml;
-    const old = isl.querySelector('.isl-in:not(.out)'); if (old) { old.classList.add('out'); setTimeout(() => old.remove(), 220); }
-    const n = document.createElement('div'); n.className = 'isl-in' + (x ? ' x' : ''); n.innerHTML = x ? cur.xhtml : cur.html; isl.appendChild(n);
+    anchor(); isl.classList.add('live'); document.body.classList.toggle('isl-on', A.top < 60);
+    const x = expanded && cur.xhtml;
+    isl.querySelectorAll('.isl-in').forEach(o => { if (o.classList.contains('out')) o.remove(); else { o.classList.add('out'); setTimeout(() => o.remove(), 140); } });   // only ever one layer leaving and one arriving
+    const n = document.createElement('div'); n.className = 'isl-in out' + (x ? ' x' : ''); n.innerHTML = x ? cur.xhtml : cur.html; isl.appendChild(n);
     // measure the content, then spring the pill to fit it
-    n.style.position = 'static'; n.style.width = x ? Math.min(340, innerWidth - 32) + 'px' : 'auto'; n.style.display = 'inline-flex';
-    const w = n.offsetWidth, h = x ? n.offsetHeight : 36; n.style.cssText = '';
-    n.classList.add('out'); requestAnimationFrame(() => n.classList.remove('out'));
-    IO.to(1); IW.to(Math.max(36, Math.min(innerWidth - 32, w))); IH.to(Math.max(36, h));
+    n.style.position = 'absolute'; n.style.inset = 'auto'; n.style.width = x ? Math.min(340, innerWidth - 24) + 'px' : 'max-content';   // measure at its natural size, not squeezed by the pill
+    // layout size (ignores the entrance scale), plus a little slack so sub-pixel text never ellipsizes
+    const w0 = n.offsetWidth + 3, h = x ? n.offsetHeight + 1 : 36;
+    n.style.position = ''; n.style.width = ''; n.style.inset = '';
+    const w = Math.max(36, x ? w0 : Math.min(w0, A.max));
+    pend = { n, w, h, t: performance.now() };
+    IO.to(1); IW.to(w); IH.to(Math.max(36, h));
+    if (reduce()) { n.classList.remove('out'); pend = null; }
     if (cur.wire) cur.wire(n);
+    paint();
   }
   function expand(on) { if (!cur || !cur.xhtml || on === expanded) return; expanded = on; render(); }
   isl.addEventListener('pointerenter', e => { if (e.pointerType !== 'touch') expand(true); });
   isl.addEventListener('pointerleave', e => { if (e.pointerType !== 'touch') expand(false); });
-  // touch: tap to open; swipe up to put it away (rubber-bands, then dismisses on a flick)
+  // press: it gives a little; swipe up to put it away (rubber-bands, then dismisses on a flick); tap to open on touch
   let sy = null, ty = 0, st = 0;
-  isl.addEventListener('pointerdown', e => { if (e.target.closest('button')) return; sy = e.clientY; st = performance.now(); isl.setPointerCapture(e.pointerId); });   // buttons inside keep their own clicks
-  isl.addEventListener('pointermove', e => { if (sy === null) return; const d = e.clientY - sy; ty = d < 0 ? d : BR.rubber(d, 200); isl.style.translate = `-50% ${ty}px`; });
+  isl.addEventListener('pointerdown', e => { PS.to(0.96); if (e.target.closest('button')) return; sy = e.clientY; st = performance.now(); isl.setPointerCapture(e.pointerId); });   // buttons inside keep their own clicks
+  isl.addEventListener('pointermove', e => { if (sy === null) return; const d = e.clientY - sy; ty = d < 0 ? d : BR.rubber(d, 200); dragY = ty; paint(); });
+  const release = () => PS.to(1, { velocity: 2 });
+  isl.addEventListener('pointercancel', release);
   isl.addEventListener('pointerup', e => {
-    if (sy === null) return; const v = ty / Math.max(1, performance.now() - st) * 1000; sy = null;
-    const back = new Spring(ty, { damping: 0.8, response: 0.3 }).on(y => { isl.style.translate = `-50% ${y}px`; });
-    if (ty < -24 || v < -500) { back.to(-80, { velocity: v, then: () => { isl.style.translate = ''; if (cur) clear(cur.id); } }); return; }
+    release(); if (sy === null) return; const v = ty / Math.max(1, performance.now() - st) * 1000; sy = null;
+    const back = new Spring(ty, { damping: 0.8, response: 0.3 }).on(y => { dragY = y; paint(); });
+    if (ty < -24 || v < -500) { back.to(-70, { velocity: v, then: () => { dragY = 0; if (cur) clear(cur.id); } }); return; }
     back.to(0, { velocity: v });
     if (Math.abs(ty) < 6 && e.pointerType === 'touch' && !e.target.closest('button')) expand(!expanded);
   });
@@ -191,7 +233,7 @@
   addEventListener('br-activity', e => {
     const d = e.detail;
     if (d.id === 'secret') set({ id: 'secret', prio: 9, ttl: 2600, say: `Secret found: ${d.name}`,
-      html: `<svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.6 7.4L22 12l-7.4 2.6L12 22l-2.6-7.4L2 12l7.4-2.6z" fill="#FF5A4C"/></svg><span>${d.name}</span><span class="mono">${d.n}/${d.of}</span>` });
+      html: `<svg class="spin" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.6 7.4L22 12l-7.4 2.6L12 22l-2.6-7.4L2 12l7.4-2.6z" fill="#FF5A4C"/></svg><span>${d.name}</span><span class="mono">${d.n}/${d.of}</span>` });
     if (d.id === 'seek') {
       clearInterval(seekIv);
       if (d.done) { clear('seek'); if (d.found) set({ id: 'seek-done', prio: 7, ttl: 2000, say: `Found in ${d.secs} seconds`, html: `${ICON.tick}<span>Found in ${d.secs} s</span>` }); return; }
@@ -202,6 +244,40 @@
         wire: n => { const g = n.querySelector('[data-giveup]'); g && g.addEventListener('click', () => dispatchEvent(new Event('br-seek-giveup'))); } });
       seekIv = setInterval(() => { isl.querySelectorAll('[data-seek]').forEach(x => { x.textContent = fmt(); }); }, 1000);
     }
+  });
+
+  /* ---------- small things in the chrome ---------- */
+  // the nav dot glides to the link you point at, then home to the current page
+  const links = document.querySelector('.nav-links');
+  if (links && fine.matches) {
+    const dot = document.createElement('i'); dot.className = 'nav-glide'; dot.setAttribute('aria-hidden', 'true'); links.appendChild(dot);
+    const st2 = document.createElement('style'); st2.textContent = `.nav-links { position: relative; } .nav-links a[aria-current="page"]::before { opacity: 0; }
+      .nav-glide { position: absolute; left: 0; bottom: -2px; width: 4px; height: 4px; border-radius: 50%; background: var(--accent); pointer-events: none; }`;
+    document.head.appendChild(st2);
+    const gx = new Spring(0, { damping: 0.86, response: 0.32 }), go = new Spring(0, { damping: 1, response: 0.2 }), gw = new Spring(4, { damping: 0.7, response: 0.25 });
+    const ap = () => { dot.style.translate = `${gx.x - gw.x / 2}px 0`; dot.style.opacity = go.x; dot.style.width = gw.x + 'px'; };
+    [gx, go, gw].forEach(q => q.on(ap));
+    const centerOf = a => { const lr = links.getBoundingClientRect(), r = a.getBoundingClientRect(); return r.left - lr.left + r.width / 2; };
+    const home = () => { const c = links.querySelector('a[aria-current="page"]'); if (c) { gx.to(centerOf(c)); go.to(1); } else go.to(0); gw.to(4); };
+    const c0 = links.querySelector('a[aria-current="page"]'); if (c0) { gx.set(centerOf(c0)); go.set(1); } else go.set(0); ap();
+    links.addEventListener('pointerover', e => { const a = e.target.closest('a'); if (!a) return; const x = centerOf(a); if (go.x < 0.05) gx.set(x); gw.to(Math.min(14, 4 + Math.abs(x - gx.x) / 20)); gx.to(x, { then: () => gw.to(4) }); go.to(1); });   // stretches a little as it travels
+    links.addEventListener('pointerleave', home);
+    addEventListener('resize', home);
+  }
+  // the theme icon turns half a circle, with a little overshoot
+  document.querySelectorAll('[data-theme-toggle] svg').forEach(svg => {
+    const rt = new Spring(0, { damping: 0.6, response: 0.45 }).on(v => { svg.style.rotate = v + 'deg'; });
+    svg.closest('[data-theme-toggle]').addEventListener('click', () => rt.to(rt.target + 180));
+  });
+  // turning sound on: the speaker's waves pop out
+  const sst = document.createElement('style');
+  sst.textContent = `[data-sound-toggle].pop svg path:not(:first-child) { animation: wpop .5s cubic-bezier(.34,1.56,.64,1); } @keyframes wpop { from { opacity: 0; scale: .4; transform-origin: 40% 50%; } }
+    .email.copied [data-email] { background: linear-gradient(color-mix(in srgb, var(--accent) 22%, transparent), color-mix(in srgb, var(--accent) 22%, transparent)) 0 0 / 0 100% no-repeat; animation: csweep .7s cubic-bezier(.16,1,.3,1) forwards; }
+    @keyframes csweep { 60% { background-size: 100% 100%; } to { background-size: 100% 100%; background-position: 100% 0; } }`;
+  document.head.appendChild(sst);
+  document.addEventListener('click', e => {
+    const sb = e.target.closest('[data-sound-toggle]'); if (sb && BR.sound.on && !reduce()) { sb.classList.remove('pop'); void sb.offsetWidth; sb.classList.add('pop'); }
+    const cp = e.target.closest('[data-copy]'); if (cp && !reduce()) { const em = cp.closest('.email'); if (em) { em.classList.remove('copied'); void em.offsetWidth; em.classList.add('copied'); setTimeout(() => em.classList.remove('copied'), 900); } }
   });
 
   /* ---------- 3. magnetic controls (mouse and trackpad only) ---------- */
