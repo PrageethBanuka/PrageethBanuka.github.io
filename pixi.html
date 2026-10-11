@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pixi for your site · Banuka Rajapaksha</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wdth,wght@75..100,400..700&display=swap">
+<link rel="stylesheet" href="assets/site.css?v=20261011u">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="canonical" href="https://prageethbanuka.github.io/pixi.html">
+<meta name="theme-color" content="#0B0E13">
+<meta name="description" content="Pixi is a tiny dot-matrix companion for your website. One script tag. It blinks, wanders, plays hide and seek and can be thrown, all on springs.">
+<meta property="og:title" content="Pixi for your site">
+<meta property="og:description" content="A tiny dot-matrix companion for any website. One script tag.">
+<meta property="og:url" content="https://prageethbanuka.github.io/pixi.html">
+<meta property="og:type" content="product">
+<meta property="og:image" content="https://prageethbanuka.github.io/assets/og.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+.feats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.feats article { border-top: 1px solid var(--ink); padding-top: 18px; display: grid; gap: 8px; align-content: start; }
+.feats p { margin: 0; color: var(--ink-2); }
+@media (max-width: 860px) { .feats { grid-template-columns: 1fr; gap: 0; } .feats article { padding-block: 16px 20px; } .feats article + article { border-top-color: var(--line); } }
+.code { position: relative; margin: 14px 0 0; padding: 16px 52px 16px 18px; border-radius: 14px; background: var(--screen); color: var(--screen-ink);
+  font: 0.82rem/1.6 var(--f-mono); overflow-x: auto; white-space: pre; }
+.code .tool { position: absolute; top: 8px; right: 8px; color: inherit; border-color: color-mix(in srgb, var(--screen-ink) 20%, transparent); }
+.lic { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.lic article { border: 1px solid var(--line); border-radius: 18px; padding: 22px; display: grid; gap: 10px; align-content: start; }
+.lic ul { margin: 0; padding-left: 18px; color: var(--ink-2); display: grid; gap: 4px; }
+@media (max-width: 860px) { .lic { grid-template-columns: 1fr; } }
+.try { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+</style>
+<script data-goatcounter="https://banuka.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+</head>
+<body>
+<script src="assets/site.js?v=20261011u"></script>
+<script>BR.nav('pixi')</script>
+
+<main>
+  <section class="wrap page-head">
+    <div class="grid">
+      <div class="hang"><span class="label">Pixi · v1</span></div>
+      <div class="main">
+        <div class="meta-row"><span class="label">One script tag</span><span class="label">No dependencies</span><span class="label">≈ 80 KB</span></div>
+        <h1 class="display">A little companion for your site<span class="dot">.</span></h1>
+        <p class="lede">Pixi is the dot-matrix face in the corner of this page. It blinks, <mark class="hl">wanders, naps and plays hide and seek</mark>, and it can be picked up and thrown. Every motion runs on springs.</p>
+        <div class="try">
+          <button class="btn ghost" type="button" data-try="seek">Play hide and seek</button>
+          <button class="btn ghost" type="button" data-try="flip">Backflip</button>
+          <button class="btn ghost" type="button" data-try="hang">Swing from the nav</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap section" aria-labelledby="f-h">
+    <div class="grid">
+      <div class="hang"><span class="label">What it does</span></div>
+      <div class="main">
+        <h2 class="h2" id="f-h" style="margin-bottom:24px">Small, alive, out of the way</h2>
+        <div class="feats">
+          <article><span class="label">Feels physical</span><p>Drag it, throw it, flick it off the bottom edge to tuck it away. Velocity carries through, edges rubber-band, landings bounce.</p></article>
+          <article><span class="label">Has a personality</span><p>Moods, heart eyes, sneezes, dizzy spells, dot art and a dozen hidden secrets. It speaks rarely, so it never nags.</p></article>
+          <article><span class="label">Plays nicely</span><p>Respects reduced motion, works with touch and keyboard, adapts to light and dark, and steps aside for your menus.</p></article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap section" aria-labelledby="i-h">
+    <div class="grid">
+      <div class="hang"><span class="label">Install</span></div>
+      <div class="main">
+        <h2 class="h2" id="i-h">One line</h2>
+        <p class="prose" style="margin-top:10px">Paste this before <code>&lt;/body&gt;</code>.</p>
+        <pre class="code" id="snip1">&lt;script src="https://prageethbanuka.github.io/assets/pixi-embed.js" defer&gt;&lt;/script&gt;<button class="tool" type="button" data-copy-code="snip1" aria-label="Copy code"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg></button></pre>
+        <p class="prose" style="margin-top:22px">Give it your own words (optional):</p>
+        <pre class="code" id="snip2">&lt;script&gt;
+  window.pixiConfig = {
+    name: 'Pixi',
+    hello: 'Hi! Welcome in.',
+    lines: ['Try the search.', 'New post every Friday.'],
+    sound: false
+  };
+&lt;/script&gt;<button class="tool" type="button" data-copy-code="snip2" aria-label="Copy code"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg></button></pre>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap section" aria-labelledby="l-h">
+    <div class="grid">
+      <div class="hang"><span class="label">Licence</span></div>
+      <div class="main">
+        <h2 class="h2" id="l-h" style="margin-bottom:24px">Free to try. Licensed for work.</h2>
+        <div class="lic">
+          <article><span class="label">Personal</span><b>Free</b>
+            <ul><li>Personal sites and portfolios</li><li>Your own lines and name</li><li>Keep the credit in the console</li></ul></article>
+          <article><span class="label">Commercial</span><b>One-time licence</b>
+            <ul><li>Company and client sites</li><li>The full source to customise</li><li>Updates for v1</li></ul>
+            <a class="btn" data-buy-pixi href="#" target="_blank" rel="noopener" hidden>Get a licence<span data-price></span> <span class="arr">↗</span></a>
+            <p class="prose" data-soon style="margin:0;color:var(--ink-3)">Licences open soon. Send me a signal below and I'll set you up.</p></article>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>BR.footer({ headline: 'Questions about Pixi<span class="dot">?</span>' })</script>
+<script>
+// try-it buttons drive the live Pixi on this page; copy buttons copy the snippets
+document.querySelectorAll('[data-try]').forEach(b => b.addEventListener('click', () => {
+  const k = b.dataset.try, p = window.__pixi; if (!p || typeof p !== 'object') return;
+  if (k === 'seek') p.hideSeek(); if (k === 'hang') p.hangStart(); if (k === 'flip') p.flip();
+}));
+document.querySelectorAll('[data-copy-code]').forEach(b => b.addEventListener('click', () => {
+  const t = document.getElementById(b.dataset.copyCode).childNodes[0].textContent.trim();
+  navigator.clipboard && navigator.clipboard.writeText(t).then(() => { dispatchEvent(new CustomEvent('br-activity', { detail: { id: 'offer', icon: '✓', text: 'Snippet copied' } })); });
+}));
+// once the licence link exists, hide the "soon" note
+setTimeout(() => { if (document.querySelector('[data-buy-pixi]:not([hidden])')) document.querySelectorAll('[data-soon]').forEach(n => n.hidden = true); }, 1500);
+</script>
+</body>
+</html>

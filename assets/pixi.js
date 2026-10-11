@@ -7,6 +7,10 @@
   const { Spring, project, rubber, clamp, reduce, store } = BR;
   const root = document.documentElement, page = (location.pathname.match(/(\w+)\.html$/) || [, 'index'])[1];
   const W = 60, H = 40, PAD = 16, CELL = 4, COLS = W / CELL, ROWS = H / CELL;   // a 15 x 10 dot matrix
+  // embedded on someone else's site (via pixi-embed.js): no routine, no portrait, their own lines
+  const CFG = window.pixiConfig || {}, EMBED = !!CFG.embed;
+  const GENERIC = ['Hi. I live here now.', 'Drag me around. I don’t bite. I don’t even have a mouth.', 'Two rectangles. That’s all a face needs.',
+    'Is it a bug or a feature?', 'Throw me. Go on.', 'Type “seek”. I’m very good at hiding.', 'I’m made of dots. Mostly.', 'Double-tap me. Trust me.'];
 
   /* ---------- what goes through my head ---------- */
   const LINES = [
@@ -62,9 +66,10 @@
     { from: 0, to: 5, mood: 'tired', prop: 'lamp', sleepy: true, say: ['Why are we awake? Oh right. Stars.', 'Go to sleep. Says the one awake.', 'Just one more frame of the Moon.'] },
   ];
   const clock = () => { const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { hour: 'numeric', minute: 'numeric', weekday: 'short', hourCycle: 'h23', timeZone: 'Asia/Colombo' }).formatToParts(new Date()).map(x => [x.type, x.value])); return { h: +p.hour + p.minute / 60, wk: p.weekday === 'Sat' || p.weekday === 'Sun' }; };
-  const slot = () => { const { h, wk } = clock(); return ROUTINE.find(s => h >= s.from && h < s.to && !(s.weekday && wk) && !(s.weekend && !wk)) || {}; };
+  const slot = () => { if (EMBED) return {}; const { h, wk } = clock(); return ROUTINE.find(s => h >= s.from && h < s.to && !(s.weekday && wk) && !(s.weekend && !wk)) || {}; };
   let caffeinated = false;
-  const pool = () => { const p = PAGE[page], R = slot().say || []; return [...(typeof p === 'function' ? p() : p || []), ...LINES, ...R, ...R]; };   // what I'm doing right now comes up twice as often
+  const pool = () => { if (EMBED) return [...(CFG.lines && CFG.lines.length ? CFG.lines : GENERIC)];
+    const p = PAGE[page], R = slot().say || []; return [...(typeof p === 'function' ? p() : p || []), ...LINES, ...R, ...R]; };   // what I'm doing right now comes up twice as often
 
   /* ---------- markup + style ---------- */
   const css = document.createElement('style');
@@ -94,13 +99,13 @@
   .pixi-fx { position: fixed; inset: 0; z-index: 59; pointer-events: none; }
   .pixi-shadow { position: fixed; left: 0; top: 0; z-index: 58; width: ${W * 0.8}px; height: 8px; border-radius: 50%; pointer-events: none;
     background: radial-gradient(closest-side, rgba(0,0,0,.22), transparent); transform-origin: 50% 50%; opacity: 0; }
-  .dot { display: inline-block; }
+  ${EMBED ? '' : '.dot { display: inline-block; }'}
   @media print { .pixi, .pixi-say, .pixi-z, .pixi-fx, .pixi-shadow { display: none; } }`;
   document.head.appendChild(css);
 
   const el = document.createElement('button');
   el.className = 'pixi'; el.type = 'button';
-  el.setAttribute('aria-label', 'Pixi, the little voice in my head. Tap for a thought.');
+  el.setAttribute('aria-label', EMBED ? `${CFG.name || 'Pixi'}, a little dot companion. Tap for a thought.` : 'Pixi, the little voice in my head. Tap for a thought.');
   el.innerHTML = `<canvas width="${W * 2}" height="${H * 2}" aria-hidden="true"></canvas>`;
   const bub = document.createElement('div'); bub.className = 'pixi-say'; bub.setAttribute('role', 'status');
   bub.innerHTML = '<span class="sr"></span><span aria-hidden="true" class="t"></span>';
@@ -827,6 +832,7 @@
 
   // eat the red full stop at the end of a headline, then give it back
   function eatDot() {
+    if (EMBED) return false;                                                             // only my own headlines' dots
     const dots = [...document.querySelectorAll('.dot')].filter(d => { const h = d.closest('h1, h2, .display'); return h && usable(h); });
     if (!dots.length) return false; const d = dots[Math.floor(Math.random() * dots.length)], h = d.closest('h1, h2, .display'), dr = d.getBoundingClientRect();
     const hr = h.getBoundingClientRect(), room = dr.right + 6 + W < innerWidth - 8;
@@ -952,6 +958,7 @@
   document.head.appendChild(pcss);
 
   function drawPortrait() {
+    if (EMBED) return false;
     if (portrait || dragging || hang || run || hiddenFx) return false;
     if (tucked) untuck(); wake(true); hush(); anchor = null; drewAt = performance.now(); offerDraw = false;
     const card = document.createElement('figure'); card.className = 'pixi-pt';
@@ -1186,12 +1193,12 @@
     let seen = ''; try { seen = sessionStorage.getItem('br-pixi-' + page) || ''; } catch (e) {}
     if (seen) return;
     const M = BR.moments || new Set();
-    const R = slot().say, first = M.has('birthday') ? SAY.birthday : page === 'index' && R ? R[0] : pool()[0];
+    const R = slot().say, first = EMBED ? (CFG.hello || 'Hi! I’m ' + (CFG.name || 'Pixi') + '. Tap me.') : M.has('birthday') ? SAY.birthday : page === 'index' && R ? R[0] : pool()[0];
     if (say(first, { mood: M.has('latenight') ? 'tired' : 'happy' })) { hop(10); try { sessionStorage.setItem('br-pixi-' + page, '1'); } catch (e) {} }
   }, 7000);
 
   feel(baseMood(), 0); queue();
   setInterval(() => { if (mood === 'default' || mood === 'tired') feel(baseMood(), 0); queue(); }, 60000);
   BR.pixi = { center: () => ({ x: X.x + W / 2, y: floorTop() - floor - Y.x + H / 2, held: dragging, away: tucked || hidden || hiddenFx }) };   // for the spacetime grid
-  window.__pixi = { hideSeek, tinker, secret, drawPortrait, roam, visit, drop, say, perform, hangStart, eatDot, surprise, teleport, fireworks, sleep };                                        // handy from the console
+  window.__pixi = { flip, hideSeek, tinker, secret, drawPortrait, roam, visit, drop, say, perform, hangStart, eatDot, surprise, teleport, fireworks, sleep };                                        // handy from the console
 })();

@@ -29,7 +29,8 @@
   .isl .steps { display: grid; grid-template-columns: repeat(16, 1fr); gap: 4px; } .isl .steps i { height: 4px; border-radius: 2px; background: rgba(255,255,255,.14); }
   .isl .steps i.on { background: #FF5A4C; }
   .isl button { font: inherit; color: inherit; background: rgba(255,255,255,.1); border: 0; border-radius: 999px; padding: 6px 12px; cursor: pointer; }
-  .isl button:active { scale: .96; }
+  .isl button:active, .isl .isl-a:active { scale: .96; }
+  .isl .isl-a { color: #050607; background: #F2F3F1; border-radius: 999px; padding: 6px 12px; text-decoration: none; font-weight: 500; }
   .isl svg { flex: none; }
   .isl .ring { --p: 0; width: 16px; height: 16px; border-radius: 50%; background: conic-gradient(#F2F3F1 calc(var(--p) * 1turn), rgba(255,255,255,.15) 0); -webkit-mask: radial-gradient(circle, transparent 4.5px, #000 5px); mask: radial-gradient(circle, transparent 4.5px, #000 5px); }
   .isl .tick path { stroke-dasharray: 20; stroke-dashoffset: 20; animation: tick .45s cubic-bezier(.16,1,.3,1) .08s forwards; } @keyframes tick { to { stroke-dashoffset: 0; } }
@@ -186,7 +187,7 @@
   isl.addEventListener('pointerleave', e => { if (e.pointerType !== 'touch') expand(false); });
   // press: it gives a little; swipe up to put it away (rubber-bands, then dismisses on a flick); tap to open on touch
   let sy = null, ty = 0, st = 0;
-  isl.addEventListener('pointerdown', e => { PS.to(0.96); if (e.target.closest('button')) return; sy = e.clientY; st = performance.now(); isl.setPointerCapture(e.pointerId); });   // buttons inside keep their own clicks
+  isl.addEventListener('pointerdown', e => { PS.to(0.96); if (e.target.closest('button, a')) return; sy = e.clientY; st = performance.now(); isl.setPointerCapture(e.pointerId); });   // buttons inside keep their own clicks
   isl.addEventListener('pointermove', e => { if (sy === null) return; const d = e.clientY - sy; ty = d < 0 ? d : BR.rubber(d, 200); dragY = ty; paint(); });
   const release = () => PS.to(1, { velocity: 2 });
   isl.addEventListener('pointercancel', release);
@@ -228,6 +229,12 @@
     set({ id: 'draw', prio: 6, say: 'Pixi is drawing a portrait', html: `<span class="ring" style="--p:${d.progress}"></span><span>Pixi is drawing</span><span class="mono" data-pct>${pct}%</span>` });
   });
 
+  // an offer (only when the shop has a link): compact line, expands to a button
+  addEventListener('br-activity', e => {
+    const d = e.detail; if (d.id !== 'offer') return;
+    set({ id: 'offer', prio: 3, ttl: d.url ? 9000 : 1800, say: d.text, html: `<span>${d.icon || ''}</span><span>${d.text}</span>`,
+      xhtml: d.url && `<div class="row"><span>${d.icon || ''} ${d.text}</span></div><div class="row"><span class="mono">Opens in a new tab</span><a class="isl-a" href="${d.url}" target="_blank" rel="noopener">${d.cta} ↗</a></div>` });
+  });
   // a secret found; hide and seek with a running clock and a give-up button
   let seekIv = 0;
   addEventListener('br-activity', e => {
