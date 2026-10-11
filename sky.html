@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Your sky, printed · Banuka Rajapaksha</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wdth,wght@75..100,400..700&display=swap">
+<link rel="stylesheet" href="assets/site.css?v=20261011v">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="canonical" href="https://prageethbanuka.github.io/sky.html">
+<meta name="theme-color" content="#0B0E13">
+<meta name="description" content="A star map of the exact sky over any Sri Lankan town on the night that matters to you. Made by Banuka Rajapaksha, an astronomer at SEDS Ruhuna. Order on WhatsApp.">
+<meta property="og:title" content="Your sky, printed">
+<meta property="og:description" content="The real sky over Sri Lanka on the night that matters to you, as a minimal star map.">
+<meta property="og:url" content="https://prageethbanuka.github.io/sky.html">
+<meta property="og:type" content="product">
+<meta property="og:image" content="https://prageethbanuka.github.io/assets/og.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+.maker { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 32px clamp(32px, 5vw, 72px); align-items: start; }
+@media (max-width: 900px) { .maker { grid-template-columns: 1fr; } }
+.stage { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 84px); display: grid; justify-items: center; gap: 12px; }
+@media (max-width: 900px) { .stage { position: static; } }
+.poster { width: min(100%, 460px); aspect-ratio: 3 / 4; border-radius: 6px; box-shadow: 0 1px 0 var(--line), 0 30px 70px -30px rgba(0,0,0,.45); display: block; transition: transform 100ms ease-out; touch-action: pan-y; }
+.form { display: grid; gap: 22px; }
+.field { display: grid; gap: 8px; }
+.field .label { color: var(--ink-3); }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.in { font: inherit; font-size: 1rem; color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; min-height: 48px; width: 100%; }
+.in:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
+select.in { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--ink-3) 50%), linear-gradient(135deg, var(--ink-3) 50%, transparent 50%); background-position: calc(100% - 20px) 50%, calc(100% - 15px) 50%; background-size: 5px 5px; background-repeat: no-repeat; }
+.seg { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 999px; flex-wrap: wrap; }
+.seg button { font: inherit; font-size: .9rem; border: 0; background: transparent; color: var(--ink-2); padding: 8px 14px; border-radius: 999px; cursor: pointer; min-height: 36px; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.seg button:active { transform: scale(.96); }
+.acts { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.price { color: var(--ink-3); }
+.fine { color: var(--ink-3); font-size: .85rem; max-width: 52ch; }
+.studio { display: none; } .studio.on { display: flex; }
+</style>
+<script data-goatcounter="https://banuka.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+</head>
+<body>
+<script src="assets/site.js?v=20261011v"></script>
+<script>BR.nav('offhours')</script>
+
+<main>
+  <section class="wrap page-head">
+    <div class="grid">
+      <div class="hang"><span class="label">Off-hours · Shop</span></div>
+      <div class="main">
+        <div class="meta-row"><span class="label">3,232 real stars</span><span class="label">Any town in Sri Lanka</span><span class="label">Any night since 1900</span></div>
+        <h1 class="display">Your sky, printed<span class="dot">.</span></h1>
+        <p class="lede">The exact sky over the place you were, on <mark class="hl">the night that matters</mark>. A birthday, the day you met, a first night under the stars. Drawn by the same code as my telescope notes.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap section" style="padding-top:0">
+    <div class="grid">
+      <div class="hang"><span class="label">Make yours</span></div>
+      <div class="main maker">
+        <div class="stage">
+          <canvas class="poster" id="poster" width="900" height="1200" role="img" aria-label="Star map preview"></canvas>
+          <span class="label" id="status">Loading the stars…</span>
+        </div>
+        <form class="form" id="form" autocomplete="off" onsubmit="return false">
+          <div class="two">
+            <label class="field"><span class="label">Date</span><input class="in" type="date" id="d" min="1900-01-01" max="2100-12-31" required></label>
+            <label class="field"><span class="label">Time</span><input class="in" type="time" id="t" value="21:00" required></label>
+          </div>
+          <label class="field"><span class="label">Place</span><select class="in" id="p"></select></label>
+          <label class="field"><span class="label">Title</span><input class="in" type="text" id="ttl" maxlength="40" placeholder="Under these stars"></label>
+          <label class="field"><span class="label">A line under it (optional)</span><input class="in" type="text" id="sub" maxlength="60" placeholder="Nimal &amp; Sachini"></label>
+          <div class="field"><span class="label">Style</span>
+            <div class="seg" role="group" aria-label="Style" id="style"><button type="button" data-v="night" aria-pressed="true">Night</button><button type="button" data-v="paper" aria-pressed="false">Paper</button><button type="button" data-v="red" aria-pressed="false">Red light</button></div></div>
+          <div class="field"><span class="label">Details</span>
+            <div class="seg" role="group" aria-label="Details" id="opts"><button type="button" data-k="lines" aria-pressed="true">Constellations</button><button type="button" data-k="grid" aria-pressed="true">Grid</button><button type="button" data-k="moon" aria-pressed="true">Moon</button></div></div>
+          <div class="field"><span class="label">Format</span>
+            <div class="seg" role="group" aria-label="Format" id="fmt"><button type="button" data-v="Digital file (print-ready, A3)" aria-pressed="true">Digital file</button><button type="button" data-v="Printed poster (delivered in Sri Lanka)" aria-pressed="false">Printed</button></div></div>
+          <div class="acts">
+            <button class="btn" type="button" id="order"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 12a8 8 0 0 1-11.6 7.1L4 20l1-4.2A8 8 0 1 1 20 12z"/></svg>Order on WhatsApp</button>
+            <button class="btn ghost" type="button" id="dl">Download preview</button>
+            <span class="label price" id="price"></span>
+          </div>
+          <div class="acts studio" id="studio"><button class="btn" type="button" id="hires">Export print file · 3600×4800</button><span class="label">Studio</span></div>
+          <p class="fine">WhatsApp opens with your choices filled in. I'll confirm the price and payment there, then send the print-ready file. The free preview is low resolution and watermarked.</p>
+          <p class="fine">Star positions: d3-celestial catalogue © 2015 Olaf Frohn (<a href="assets/sky-data.LICENSE.txt">BSD licence</a>).</p>
+        </form>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>BR.footer({ headline: 'A sky for someone<span class="dot">?</span>' })</script>
+<script>
+(() => {
+const { Spring, clamp, reduce, blip } = BR, rad = Math.PI / 180, WA = '94716220226';
+const PLACES = [['Colombo', 6.9271, 79.8612], ['Moratuwa', 6.7951, 79.9008], ['Kandy', 7.2906, 80.6337], ['Galle', 6.0535, 80.2210], ['Jaffna', 9.6615, 80.0255],
+  ['Trincomalee', 8.5874, 81.2152], ['Anuradhapura', 8.3114, 80.4037], ['Nuwara Eliya', 6.9497, 80.7891], ['Matara', 5.9549, 80.5550], ['Batticaloa', 7.7310, 81.6747],
+  ['Kurunegala', 7.4863, 80.3647], ['Ratnapura', 6.6828, 80.3992], ['Negombo', 7.2008, 79.8737], ['Badulla', 6.9934, 81.0550], ['Hambantota', 6.1241, 81.1185], ['Ella', 6.8667, 81.0466]];
+const STY = { night: { bg: '#0B0E13', ink: '#E8EAE6', dim: 'rgba(232,234,230,.16)' }, paper: { bg: '#F3ECE0', ink: '#3B0F0B', dim: 'rgba(59,15,11,.16)' }, red: { bg: '#0A0606', ink: '#FF5A4C', dim: 'rgba(255,90,76,.2)' } };
+const $ = id => document.getElementById(id), cv = $('poster'), c = cv.getContext('2d');
+const P = $('p'); P.innerHTML = PLACES.map(([n], i) => `<option value="${i}">${n}</option>`).join('');
+const today = new Date(Date.now() + 5.5 * 36e5).toISOString().slice(0, 10); $('d').value = today;
+let DATA = null, style = 'night', opt = { lines: true, grid: true, moon: true }, fmt = 'Digital file (print-ready, A3)';
+
+// sky maths: Julian day, local sidereal time, alt-azimuth, a low-precision Moon
+const jd = ms => ms / 864e5 + 2440587.5;
+const gmst = ms => { const d = jd(ms) - 2451545; return ((280.46061837 + 360.98564736629 * d) % 360 + 360) % 360; };
+function altaz(ra, dec, L, lat) {
+  const H = (L - ra) * rad, d = dec * rad, p = lat * rad;
+  const alt = Math.asin(Math.sin(p) * Math.sin(d) + Math.cos(p) * Math.cos(d) * Math.cos(H));
+  const az = Math.atan2(-Math.sin(H) * Math.cos(d), Math.sin(d) * Math.cos(p) - Math.cos(d) * Math.sin(p) * Math.cos(H));
+  return [alt / rad, az / rad];
+}
+function moon(ms) {
+  const d = jd(ms) - 2451545, L = (218.316 + 13.176396 * d) * rad, M = (134.963 + 13.064993 * d) * rad, F = (93.272 + 13.22935 * d) * rad;
+  const lon = L + 6.289 * rad * Math.sin(M), lat = 5.128 * rad * Math.sin(F), e = 23.439 * rad;
+  const ra = Math.atan2(Math.sin(lon) * Math.cos(e) - Math.tan(lat) * Math.sin(e), Math.cos(lon)), dec = Math.asin(Math.sin(lat) * Math.cos(e) + Math.cos(lat) * Math.sin(e) * Math.sin(lon));
+  const ph = (((ms - Date.UTC(2000, 0, 6, 18, 14)) / 864e5) % 29.530588853 + 29.530588853) % 29.530588853 / 29.530588853;
+  return { ra: ((ra / rad) + 360) % 360, dec: dec / rad, ph };
+}
+function when() {
+  const [y, m, d] = ($('d').value || today).split('-').map(Number), [hh, mm] = ($('t').value || '21:00').split(':').map(Number);
+  return Date.UTC(y, m - 1, d, hh, mm) - 5.5 * 36e5;                                     // the inputs are Sri Lanka time (UTC+5:30)
+}
+
+// the sky turns to each new choice instead of jumping: sidereal angle and latitude ride on springs
+const L = new Spring(0, { damping: 1, response: 0.7 }), LAT = new Spring(6.9, { damping: 1, response: 0.7 });
+let raf = 0; const kick = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; draw(c, cv.width, cv.height, false); }); };
+[L, LAT].forEach(s => s.on(kick));
+function target(first) {
+  const ms = when(), pl = PLACES[+P.value], l = (gmst(ms) + pl[2]) % 360;
+  let to = l; const cur = L.x; to += Math.round((cur - to) / 360) * 360;                // take the short way round
+  if (first) { L.set(to); LAT.set(pl[1]); } else { L.to(to); LAT.to(pl[1]); }
+  kick();
+}
+
+function draw(g, W, H, wm) {
+  const S = STY[style], u = W / 900, ms = when(), pl = PLACES[+P.value], lst = L.x, lat = LAT.x;
+  g.fillStyle = S.bg; g.fillRect(0, 0, W, H);
+  const cx = W / 2, cy = H * 0.41, R = W * 0.39;
+  const proj = (alt, az) => { const r = R * (90 - alt) / 90, a = az * rad; return [cx - r * Math.sin(a), cy - r * Math.cos(a)]; };   // looking up: north up, east left
+  if (opt.grid) {
+    g.strokeStyle = S.dim; g.lineWidth = 1 * u; g.setLineDash([2 * u, 6 * u]);
+    [30, 60].forEach(a => { g.beginPath(); g.arc(cx, cy, R * (90 - a) / 90, 0, 6.283); g.stroke(); }); g.setLineDash([]);
+  }
+  g.strokeStyle = S.ink; g.globalAlpha = 0.85; g.lineWidth = 1.4 * u; g.beginPath(); g.arc(cx, cy, R, 0, 6.283); g.stroke(); g.globalAlpha = 1;
+  g.fillStyle = S.ink; g.globalAlpha = 0.75; g.font = `500 ${16 * u}px "Geist Mono", ui-monospace, monospace`; g.textAlign = 'center'; g.textBaseline = 'middle';
+  [['N', 0], ['E', 90], ['S', 180], ['W', 270]].forEach(([t, az]) => { const [x, y] = proj(-7, az); g.fillText(t, x, y); }); g.globalAlpha = 1;
+  if (DATA) {
+    g.save(); g.beginPath(); g.arc(cx, cy, R - 1, 0, 6.283); g.clip();
+    if (opt.lines) {
+      g.strokeStyle = S.ink; g.globalAlpha = 0.32; g.lineWidth = 0.9 * u;
+      for (const seg of DATA.lines) { g.beginPath(); let pen = false; for (const [ra, dec] of seg) { const [al, az] = altaz(ra, dec, lst, lat); if (al < -2) { pen = false; continue; } const [x, y] = proj(al, az); pen ? g.lineTo(x, y) : g.moveTo(x, y); pen = true; } g.stroke(); }
+      g.globalAlpha = 1;
+    }
+    g.fillStyle = S.ink;
+    for (const [ra, dec, mag] of DATA.stars) {
+      const [al, az] = altaz(ra, dec, lst, lat); if (al < 0) continue;
+      const [x, y] = proj(al, az), r = Math.max(0.55, (6 - mag) * 0.62) * u;
+      g.globalAlpha = Math.min(1, 0.35 + (6 - mag) * 0.17); g.beginPath(); g.arc(x, y, r, 0, 6.283); g.fill();
+    }
+    g.globalAlpha = 1;
+    if (opt.moon) {
+      const m = moon(ms), [al, az] = altaz(m.ra, m.dec, lst, lat);
+      if (al > 0) { const [x, y] = proj(al, az), r = 9 * u; g.fillStyle = S.dim; g.beginPath(); g.arc(x, y, r, 0, 6.283); g.fill();
+        g.save(); if (m.ph > 0.5) { g.translate(2 * x, 0); g.scale(-1, 1); } const q = m.ph > 0.5 ? 1 - m.ph : m.ph, rx = r * Math.abs(Math.cos(q * 2 * Math.PI));
+        g.fillStyle = S.ink; g.beginPath(); g.arc(x, y, r, -Math.PI / 2, Math.PI / 2, false); g.ellipse(x, y, rx, r, 0, Math.PI / 2, -Math.PI / 2, q < 0.25); g.fill(); g.restore(); }
+    }
+    g.restore();
+  }
+  // type: the title, the line under it, and the coordinates of the moment
+  const title = $('ttl').value.trim() || 'Under these stars', sub = $('sub').value.trim();
+  const dt = new Date(ms + 5.5 * 36e5), ds = dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+  g.fillStyle = S.ink; g.textAlign = 'center'; g.textBaseline = 'alphabetic';
+  g.font = `600 ${50 * u}px "Instrument Sans", system-ui, sans-serif`; g.fillText(title, cx, H * 0.83, W * 0.84);
+  if (sub) { g.globalAlpha = 0.8; g.font = `400 ${24 * u}px "Instrument Sans", system-ui, sans-serif`; g.fillText(sub, cx, H * 0.87, W * 0.84); }
+  g.globalAlpha = 0.6; g.font = `500 ${13 * u}px "Geist Mono", ui-monospace, monospace`;
+  const coords = `${pl[0].toUpperCase()} · ${pl[1].toFixed(4)}° N ${pl[2].toFixed(4)}° E · ${ds.toUpperCase()} · ${$('t').value}`;
+  if (g.letterSpacing !== undefined) g.letterSpacing = `${1.5 * u}px`;
+  g.fillText(coords, cx, H * (sub ? 0.915 : 0.885), W * 0.9); if (g.letterSpacing !== undefined) g.letterSpacing = '0px';
+  g.globalAlpha = 0.3; g.font = `500 ${10 * u}px "Geist Mono", ui-monospace, monospace`; g.fillText('PRAGEETHBANUKA.GITHUB.IO', cx, H * 0.965); g.globalAlpha = 1;
+  if (wm) {                                                                                // preview watermark
+    g.save(); g.translate(W / 2, H / 2); g.rotate(-0.5); g.fillStyle = S.ink; g.globalAlpha = 0.09; g.font = `600 ${48 * u}px "Instrument Sans", sans-serif`;
+    for (let k = -3; k <= 3; k++) g.fillText('PREVIEW · ORDER ON WHATSAPP', 0, k * 150 * u); g.restore();
+  }
+}
+
+// controls
+['d', 't', 'p'].forEach(id => $(id).addEventListener('input', () => target(false)));
+['ttl', 'sub'].forEach(id => $(id).addEventListener('input', kick));
+const seg = (id, fn) => $(id).addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; fn(b); blip('tick'); kick(); });
+seg('style', b => { style = b.dataset.v; $('style').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b)); });
+seg('opts', b => { opt[b.dataset.k] = !opt[b.dataset.k]; b.setAttribute('aria-pressed', opt[b.dataset.k]); });
+seg('fmt', b => { fmt = b.dataset.v; $('fmt').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b)); });
+setTimeout(() => { const price = BR.shop && BR.shop.skyPrice; if (price) $('price').textContent = price; }, 900);   // the shop config loads after this page script
+
+// the poster leans toward the pointer a little, like a print held in your hand
+if (matchMedia('(hover: hover) and (pointer: fine)').matches && !reduce()) {
+  const rx = new Spring(0, { damping: 0.8, response: 0.4 }), ry = new Spring(0, { damping: 0.8, response: 0.4 });
+  const ap = () => { cv.style.transform = `perspective(1200px) rotateX(${rx.x}deg) rotateY(${ry.x}deg)`; }; rx.on(ap); ry.on(ap);
+  cv.addEventListener('pointermove', e => { const r = cv.getBoundingClientRect(); ry.to(((e.clientX - r.left) / r.width - 0.5) * 6); rx.to((0.5 - (e.clientY - r.top) / r.height) * 5); });
+  cv.addEventListener('pointerleave', () => { rx.to(0); ry.to(0); });
+}
+
+function render(scale, wm) { const o = document.createElement('canvas'); o.width = 900 * scale; o.height = 1200 * scale; draw(o.getContext('2d'), o.width, o.height, wm); return o; }
+function save(canvas, name) { canvas.toBlob(b => { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }, 'image/png'); }
+const slug = () => `${PLACES[+P.value][0].toLowerCase().replace(/\s+/g, '-')}-${$('d').value}`;
+$('dl').addEventListener('click', () => { save(render(2 / 3, true), `star-map-preview-${slug()}.png`); dispatchEvent(new CustomEvent('br-activity', { detail: { id: 'offer', icon: '✓', text: 'Preview downloaded' } })); });
+$('order').addEventListener('click', () => {
+  const pl = PLACES[+P.value], msg = `Hi Banuka! I'd like a star map ✨\n\nTitle: ${$('ttl').value.trim() || 'Under these stars'}\n${$('sub').value.trim() ? 'Line: ' + $('sub').value.trim() + '\n' : ''}Place: ${pl[0]}\nDate: ${$('d').value}, ${$('t').value}\nStyle: ${style}${opt.lines ? ' · constellations' : ''}${opt.grid ? ' · grid' : ''}${opt.moon ? ' · moon' : ''}\nFormat: ${fmt}`;
+  open(`https://wa.me/${WA}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener');
+});
+// studio: my own print exports, behind a passphrase (open sky.html#studio)
+const STUDIO = '6fa3ff04d05a35f4fb689f98bd9edafcd58aba1258d3824ea484210a7d65b17c';
+async function studio() {
+  if (sessionStorage.getItem('br-studio') !== STUDIO) {
+    const p = prompt('Studio passphrase'); if (!p) return;
+    const h = [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(p.trim())))].map(b => b.toString(16).padStart(2, '0')).join('');
+    if (h !== STUDIO) return; sessionStorage.setItem('br-studio', h);
+  }
+  $('studio').classList.add('on');
+}
+if (location.hash === '#studio') studio();
+$('hires').addEventListener('click', () => { $('status').textContent = 'Rendering 3600×4800…'; setTimeout(() => { save(render(4, false), `star-map-${slug()}-print.png`); $('status').textContent = 'Print file saved'; }, 50); });
+
+// load the catalogue, then let the sky turn into place
+target(true);
+fetch('assets/sky-data.json').then(r => r.json()).then(d => { DATA = d; $('status').textContent = `${d.stars.length.toLocaleString()} stars · drag the date to watch the sky turn`; kick(); })
+  .catch(() => { $('status').textContent = 'Couldn’t load the stars. Refresh to try again.'; });
+document.fonts && document.fonts.ready.then(kick);
+})();
+</script>
+</body>
+</html>

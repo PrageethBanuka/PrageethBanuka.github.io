@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wdth,wght@75..100,400..700&display=swap">
-<link rel="stylesheet" href="assets/site.css?v=20261011u">
+<link rel="stylesheet" href="assets/site.css?v=20261011v">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <meta name="theme-color" content="#0B0E13">
 <meta name="description" content="Banuka Rajapaksha stargazes with his own telescope and manages the SEDS Ruhuna Observation Division: Ad Astra night observation camps, community stargazing, astrophotography and STEM outreach in Sri Lanka.">
@@ -54,13 +54,17 @@
 .redphoto .frame { background: var(--accent); border-radius: 6px; overflow: hidden; isolation: isolate; }
 .redphoto img { width: 100%; height: auto; display: block; filter: grayscale(1) contrast(1.2); mix-blend-mode: multiply; }
 .two > * { min-width: 0; }
+.sky-offer { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 6px 18px; align-items: center; margin-top: 40px; padding: 16px 20px; border: 1px solid var(--line); border-radius: 16px; text-decoration: none; color: var(--ink); transition: border-color var(--q), transform 100ms ease-out; }
+.sky-offer:hover { border-color: var(--ink-3); } .sky-offer:active { transform: scale(.99); }
+.sky-offer .go { transition: transform var(--h) var(--ease-out); } .sky-offer:hover .go { transform: translateX(4px); }
+@media (max-width: 700px) { .sky-offer { grid-template-columns: 1fr auto; } .sky-offer .label { grid-column: 1 / -1; } }
 .two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); gap: 32px 56px; }
 @media (max-width: 1000px) { .two { grid-template-columns: 1fr; } }
 </style>
 <script data-goatcounter="https://banuka.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 </head>
 <body>
-<script src="assets/site.js?v=20261011u"></script>
+<script src="assets/site.js?v=20261011v"></script>
 <script>BR.nav('offhours')</script>
 
 <main>
@@ -98,6 +102,9 @@
         </div>
       </div>
     </div>
+      <div class="grid"><div class="hang"></div><div class="main">
+      <a class="sky-offer" href="sky.html"><span class="label">Your sky, printed</span><span>The stars over any town in Sri Lanka, on the night that matters to you.</span><span class="go" aria-hidden="true">→</span></a>
+    </div></div>
   </section>
 
   <!-- ASTROPHOTOGRAPHY -->

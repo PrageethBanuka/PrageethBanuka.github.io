@@ -147,6 +147,49 @@
     });
   }
 
+  /* ---------- over the day: the real Sun over Moratuwa sets a few quiet things ----------
+     shadows lean away from it, golden hour warms the page a touch, blue hour cools it, the hero shows where it is, the logo star glows at night */
+  {
+    const LAT = 6.7951, LON = 79.9008, R = Math.PI / 180;
+    function sun(ms) {                                                                   // solar altitude and azimuth (degrees), good to a fraction of a degree
+      const d = ms / 864e5 + 2440587.5 - 2451545, g = (357.529 + 0.98560028 * d) * R, q = 280.459 + 0.98564736 * d;
+      const L = (q + 1.915 * Math.sin(g) + 0.020 * Math.sin(2 * g)) * R, e = (23.439 - 0.00000036 * d) * R;
+      const ra = Math.atan2(Math.cos(e) * Math.sin(L), Math.cos(L)), dec = Math.asin(Math.sin(e) * Math.sin(L));
+      const gmst = (280.46061837 + 360.98564736629 * d) % 360, H = ((gmst + LON) * R - ra), p = LAT * R;
+      const alt = Math.asin(Math.sin(p) * Math.sin(dec) + Math.cos(p) * Math.cos(dec) * Math.cos(H));
+      const az = Math.atan2(-Math.sin(H) * Math.cos(dec), Math.sin(dec) * Math.cos(p) - Math.cos(dec) * Math.sin(p) * Math.cos(H));
+      return [alt / R, ((az / R) + 360) % 360];
+    }
+    const st = document.createElement('style');
+    st.textContent = `
+      :root { --sun-x: 0; }
+      .pixi-shadow { margin-left: calc(var(--sun-x) * -7px); }
+      .daylight { position: fixed; inset: 0; z-index: 57; pointer-events: none; opacity: 0; transition: opacity 4s ease; mix-blend-mode: multiply; }
+      :root.golden:not([data-theme="dark"]) .daylight { opacity: 1; background: radial-gradient(120% 90% at var(--sun-at, 100%) 100%, rgba(255, 178, 110, .10), transparent 70%); }
+      :root.bluehour:not([data-theme="dark"]) .daylight { opacity: 1; background: linear-gradient(rgba(120, 150, 230, .06), transparent 60%); }
+      @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .daylight { opacity: 0 !important; } }
+      :root.night .brand .star { box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 18%, transparent), 0 0 10px color-mix(in srgb, var(--accent) 55%, transparent); }
+      .sunread { transition: opacity .6s ease; }`;
+    document.head.appendChild(st);
+    const veil = document.createElement('div'); veil.className = 'daylight'; veil.setAttribute('aria-hidden', 'true'); document.body.appendChild(veil);
+    const coords = document.querySelector('.hero .coords'); let read = null;
+    if (coords) { read = document.createElement('span'); read.className = 'label sunread'; coords.appendChild(read); }
+    const hm = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Colombo' });
+    function tick() {
+      const now = Date.now(), [alt, az] = sun(now);
+      root.style.setProperty('--sun-x', (alt > 0 ? Math.sin(az * R) * Math.cos(alt * R) : 0).toFixed(3));   // east = +1, west = -1, fades toward noon
+      root.style.setProperty('--sun-at', az < 180 ? '100%' : '0%');
+      root.classList.toggle('golden', alt > -1 && alt < 8);
+      root.classList.toggle('bluehour', alt <= -1 && alt > -6 && az < 180);
+      root.classList.toggle('night', alt < -6);
+      if (read) {
+        let set = null; for (let m = 0; m < 24 * 60; m += 2) { if (sun(now + m * 6e4)[0] < -0.833) { set = now + m * 6e4; break; } }
+        read.textContent = alt > -0.833 ? `Sun ${Math.round(alt)}° up${set ? ' · sets ' + hm.format(set) : ''}` : alt > -12 ? 'Sun just down · twilight' : 'Sun down · stars out';
+      }
+    }
+    tick(); setInterval(tick, 60000);
+  }
+
   /* ---------- the clock shows seconds while you hover it ---------- */
   const clk = document.querySelector('.nav [data-clock]');
   if (clk && fine) {
