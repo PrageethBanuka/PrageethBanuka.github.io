@@ -116,7 +116,7 @@
   const lx = new Spring(0, { damping: 0.85, response: 0.3 }), ly = new Spring(0, { damping: 0.85, response: 0.3 });
   const open = new Spring(1, { damping: 1, response: 0.09 }), lid = new Spring(0, { damping: 1, response: 0.25 }), tall = new Spring(1, { damping: 0.6, response: 0.3 });
   const B = new Spring(0, { damping: 0.45, response: 0.22 }), Q = new Spring(0, { damping: 0.5, response: 0.24 });
-  let dancing = null, sawRefill = false, jittery = false, anchor = null, roamAt = 0, mood = 'default', floor = 0, dragging = false, asleep = false, dizzyUntil = 0, lastAct = performance.now(), hidden = false;
+  let run = null, tiredAt = -Infinity, overWave = false, dancing = null, sawRefill = false, jittery = false, anchor = null, roamAt = 0, mood = 'default', floor = 0, dragging = false, asleep = false, dizzyUntil = 0, lastAct = performance.now(), hidden = false;
   Y.set(tucked ? -(H - 11) : 0);
 
   let K = {};
@@ -172,7 +172,13 @@
       const cx = W / 2, cy = CELL / 2; c.fillStyle = K.red; c.globalAlpha = 0.25; c.beginPath(); c.arc(cx, cy, 3.4, 0, 6.283); c.fill();
       c.globalAlpha = 1; c.beginPath(); c.arc(cx, cy, 1.6, 0, 6.283); c.fill();
     }
-    if (prop === 'type' && bub.style.visibility !== 'visible' && !anchor) {             // typing dots: busy at work
+    const feet = (walking || run) && !asleep;
+    if (feet) {                                                                        // two little feet, stepping
+      const k = Math.sin(t * (run ? 10 + 12 * run.e : 9.6)) > 0;
+      [[-1, k], [1, !k]].forEach(([sd, up]) => { c.fillStyle = K.ink; c.globalAlpha = up ? 0.55 : 1; c.beginPath(); c.arc(W / 2 + sd * CELL * 1.5, H - CELL * (up ? 1.25 : 0.6), 1.4, 0, 6.283); c.fill(); });
+      c.globalAlpha = 1;
+    }
+    if (prop === 'type' && !feet && bub.style.visibility !== 'visible' && !anchor) {             // typing dots: busy at work
       const k = Math.floor(t * 3.2) % 4;                                                 // steps on the half beat of 96 BPM
       for (let i = 0; i < 3; i++) { c.globalAlpha = i === k ? 1 : 0.35; c.fillStyle = K.ink; c.beginPath(); c.arc(W / 2 + (i - 1) * CELL * 1.5, H - CELL * 1.5, 1.3, 0, 6.283); c.fill(); }
       c.globalAlpha = 1; typingOn = true;
@@ -255,12 +261,13 @@
     queue();
   }
   function tilt(v) { R.to(clamp(-v / 120, -10, 10)); }
-  X.on(() => { if (!dragging) R.to(clamp(-X.v / 140, -8, 8)); });                       // lean into the walk: the motion hints the direction
+  X.on(() => { if (!dragging && !run) R.to(clamp(-X.v / 140, -8, 8)); });                       // lean into the walk: the motion hints the direction
   function hop(h = 14) { if (reduce()) return; Y.to(Y.target, { velocity: h * 12, damping: 0.55, response: 0.32 }); }
   function wander() { const span = Math.min(260, innerWidth * 0.3); walkTo(X.x + (Math.random() < 0.5 ? -1 : 1) * (60 + Math.random() * span)); }
 
   // perch on top of cards that sit at the bottom of the screen (playlist, notifications)
   function perch() {
+    if (run) return;
     const away0 = document.body.classList.contains('menu-open') || !!document.querySelector('.intro, .wa.live, .refill');
     if (anchor) { if (away0 && !hidden) { hidden = true; el.classList.add('away'); hush(); } else if (!away0 && hidden) { hidden = false; el.classList.remove('away'); } return follow(); }
     let f = 0; const L = X.x, Rx = X.x + W;
@@ -345,6 +352,11 @@
     let top = e.clientY - g.dy, h = floorTop() - floor - top;
     if (top < 4) h = floorTop() - floor - 4 - rubber(top - 4, innerHeight);
     X.set(nx); Y.set(h); tx.add(nx); ty.add(-h);
+    if (BR.wave) {
+      const wr = BR.wave.el.getBoundingClientRect(), inside = e.clientX > wr.left && e.clientX < wr.right && e.clientY > wr.top - 20 && e.clientY < wr.bottom;
+      if (inside) { BR.wave.focus((e.clientX - wr.left) / wr.width); if (!overWave) { overWave = true; feel('happy', 0); ly.to(1); chirp(1); } }
+      else if (overWave) { overWave = false; BR.wave.release(); feel('surprised', 0); }
+    }
     R.to(clamp(tx.vel() / 90, -18, 18));
   });
   const up = e => {
@@ -352,6 +364,8 @@
     if (!moved) { tall.to(1); return tap(); }
     const vx = tx.vel(), vy = ty.vel(), speed = Math.hypot(vx, vy);
     if (Y.x < -18 || (vy > 900 && Y.x < 40)) return tuck(vy);
+    overWave = false;
+    if (dropOn(e.clientX, e.clientY)) return;
     const land = clamp(X.x + project(vx, 0.995), PAD, maxX());
     X.to(land, { velocity: vx, damping: 1, response: 0.55, then: () => tilt(0) });
     Y.to(0, { velocity: -vy, damping: 0.5, response: 0.45 });                         // thrown: momentum earns a bounce
@@ -501,12 +515,68 @@
   }
   function stretch() { tall.to(1.2, { damping: 0.6, response: 0.4 }); B.to(0, { velocity: 60 }); setTimeout(() => tall.to(1), 700); }
 
+
+  /* ---------- drop it on things ---------- */
+  function dropOn(x, y) {
+    const hit = document.elementsFromPoint(x, y).find(n => !n.closest('.pixi, .pixi-say, .pixi-z'));
+    if (!hit) return false;
+    if (BR.wave && hit.closest('#scope')) { const wr = BR.wave.el.getBoundingClientRect(); return startRun((x - wr.left) / wr.width); }
+    const step = hit.closest('.seq-row button');
+    if (step) { step.click(); nudge(step); setTimeout(() => say('Drop the beat. Literally.', { mood: 'happy' }), 400); return false; }   // toggles one step, then falls as usual
+    const spot = hit.closest(SPOTS);
+    if (spot && visit(spot, 'drop')) {
+      const line = spot.id === 'eyes' ? 'Oh hi, big me.' : spot.id === 'sky' ? 'Stargazing. Professionally.' : null;
+      if (line) setTimeout(() => say(line, { mood: 'happy' }), 900);
+      return true;
+    }
+    return false;
+  }
+
+  /* ---------- run on the wave until tired ---------- */
+  const RUN_SAY = ['Cardio!', 'I am speed.', 'Is this… exercise?', 'Surf’s up. Signal’s up.'];
+  function startRun(u) {
+    if (reduce() || !BR.wave) return false;
+    if (performance.now() - tiredAt < 30000) { setTimeout(() => say('Legs. Gone. Ask me later.', { mood: 'tired' }), 300); return false; }
+    anchor = null; hush(); wake(true); feel('happy', 0); chirp(2);
+    run = { u: clamp(u, 0.05, 0.95), dir: Math.random() < 0.5 ? 1 : -1, e: 1, last: performance.now(), mid: false };
+    requestAnimationFrame(runStep); return true;
+  }
+  function runStep(t) {
+    if (!run) return;
+    if (dragging) { run = null; BR.wave.release(); return; }
+    const dt = Math.min(0.05, (t - run.last) / 1000); run.last = t;
+    const r = BR.wave.el.getBoundingClientRect();
+    if (r.bottom < 70 || r.top > innerHeight - 30 || hidden) return endRun(false);
+    run.u += run.dir * (0.05 + 0.2 * run.e) * dt;                                        // slows down as it tires
+    const lo = (W / 2 + 8) / r.width, hi = 1 - lo;
+    if (run.u > hi || run.u < lo) { run.u = clamp(run.u, lo, hi); run.dir = -run.dir; kick(0.7); }
+    run.e = Math.max(0, run.e - dt / 15);
+    BR.wave.focus(run.u);                                                                // its weight bends the trace
+    const y0 = r.top + BR.wave.y(run.u), y1 = r.top + BR.wave.y(Math.min(1, run.u + 0.01));
+    X.set(r.left + run.u * r.width - W / 2); Y.to(floorTop() - floor - (y0 - H + 4), { damping: 0.8, response: 0.09 });   // springs up and down the steps of the square wave
+    R.to(clamp(Math.atan2(y1 - y0, 0.01 * r.width) * 57.3, -35, 35), { damping: 1, response: 0.12 });   // lean with the slope
+    lx.to(run.dir * 0.8); ly.to(0.3);
+    if (!run.mid && run.e < 0.6) { run.mid = true; say(RUN_SAY[Math.floor(Math.random() * RUN_SAY.length)]); }
+    if (run.e < 0.35 && mood !== 'tired') feel('tired', 0);
+    if (run.e <= 0) return endRun(true);
+    requestAnimationFrame(runStep);
+  }
+  function endRun(tired) {
+    if (!run) return; run = null; BR.wave.release(); R.to(0); lx.to(0);
+    if (!tired) return fall();
+    tiredAt = performance.now(); feel('tired', 0); ly.to(0.8);
+    let n = 0; const pant = setInterval(() => { squash(0.5); if (++n > 9) clearInterval(pant); }, 200);   // out of breath
+    setTimeout(() => say('Okay. Cardio done. For the year.', { mood: 'tired' }), 400);
+    setTimeout(() => { if (!dragging && !run) fall(); }, 3200);
+  }
+  function fall() { if (dragging) return; Y.to(0, { damping: 0.5, response: 0.45, then: () => { feel(baseMood(), 0); setTimeout(() => !anchor && !run && walkTo(home()), 900); } }); }
+
   /* ---------- a life of its own ---------- */
   (function blinks() { setTimeout(() => { if (!document.hidden) blink(Math.random() < 0.2); blinks(); }, 2200 + Math.random() * 3800); })();
   (function idle() {
     setTimeout(() => {
       idle();
-      if (document.hidden || dragging || tucked || hidden || dancing) return;
+      if (document.hidden || dragging || tucked || hidden || dancing || run) return;
       const quiet = performance.now() - lastAct;
       if (quiet > (slot().sleepy ? 20000 : 45000)) return sleep();
       if (asleep) return;

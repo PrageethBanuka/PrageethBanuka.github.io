@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wdth,wght@75..100,400..700&display=swap">
-<link rel="stylesheet" href="assets/site.css?v=20261011k">
+<link rel="stylesheet" href="assets/site.css?v=20261011l">
 <style>
 .hero { padding-block: clamp(56px, 9vw, 120px) clamp(28px, 4vw, 48px); }
 .hero .coords { display: flex; flex-wrap: wrap; gap: 6px 22px; margin-bottom: 28px; }
@@ -111,7 +111,7 @@
 <script data-goatcounter="https://banuka.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 </head>
 <body>
-<script src="assets/site.js?v=20261011k"></script>
+<script src="assets/site.js?v=20261011l"></script>
 <script>BR.nav('home', { draw: true })</script>
 
 <main id="main">
@@ -226,8 +226,9 @@ function y(u, t) {
   return H / 2 - v * a * (H * 0.42);
 }
 let fpsT = performance.now(), fpsN = 0; const fpsEl = document.getElementById('rdFps');
+let lastT = 0;
 function draw(now) {
-  const t = reduce() ? 0 : now / 1000;
+  const t = reduce() ? 0 : now / 1000; lastT = t;
   cx.clearRect(0, 0, W, H);
   cx.strokeStyle = col.line; cx.lineWidth = 1; cx.beginPath();
   for (let x = 48; x < W; x += 48) { cx.moveTo(x + 0.5, 0); cx.lineTo(x + 0.5, H); }
@@ -254,6 +255,8 @@ new IntersectionObserver(es => { visible = es[0].isIntersecting; if (visible && 
 [...w, amp, px, heart].forEach(s => s.on(() => { if (reduce()) draw(0); }));
 scope.addEventListener('pointermove', e => { const r = scope.getBoundingClientRect(); px.to(clamp((e.clientX - r.left) / r.width, 0, 1), { damping: 1, response: 0.18 }); amp.to(1); });
 scope.addEventListener('pointerleave', () => { amp.to(0, { response: 0.6 }); px.to(0.72, { response: 0.8 }); });
+// Pixi can run on the trace: it reads the live shape and leans on the playhead
+BR.wave = { el: scope, y: u => y(u, lastT), focus(u) { px.to(clamp(u, 0, 1), { damping: 1, response: 0.18 }); amp.to(1); }, release() { amp.to(0, { response: 0.6 }); px.to(0.72, { response: 0.8 }); } };
 
 /* ---------- tuner dial ---------- */
 const dial = document.getElementById('dial'), needle = document.getElementById('needle'), stops = document.getElementById('stops');
