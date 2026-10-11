@@ -91,7 +91,11 @@
   .pixi-say .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   @media (prefers-reduced-transparency: reduce) { .pixi-say { background: var(--bg); backdrop-filter: none; -webkit-backdrop-filter: none; } }
   @media (prefers-reduced-motion: reduce) { .pixi-z.on { animation: none; opacity: .8; } }
-  @media print { .pixi, .pixi-say, .pixi-z { display: none; } }`;
+  .pixi-fx { position: fixed; inset: 0; z-index: 59; pointer-events: none; }
+  .pixi-shadow { position: fixed; left: 0; top: 0; z-index: 58; width: ${W * 0.8}px; height: 8px; border-radius: 50%; pointer-events: none;
+    background: radial-gradient(closest-side, rgba(0,0,0,.22), transparent); transform-origin: 50% 50%; opacity: 0; }
+  .dot { display: inline-block; }
+  @media print { .pixi, .pixi-say, .pixi-z, .pixi-fx, .pixi-shadow { display: none; } }`;
   document.head.appendChild(css);
 
   const el = document.createElement('button');
@@ -101,7 +105,9 @@
   const bub = document.createElement('div'); bub.className = 'pixi-say'; bub.setAttribute('role', 'status');
   bub.innerHTML = '<span class="sr"></span><span aria-hidden="true" class="t"></span>';
   const zz = document.createElement('span'); zz.className = 'pixi-z'; zz.setAttribute('aria-hidden', 'true'); zz.textContent = 'z';
-  document.body.append(zz, bub, el);
+  const fx = document.createElement('canvas'); fx.className = 'pixi-fx'; fx.setAttribute('aria-hidden', 'true');
+  const shadow = document.createElement('span'); shadow.className = 'pixi-shadow'; shadow.setAttribute('aria-hidden', 'true');
+  document.body.append(fx, shadow, zz, bub, el);
   const cv = el.querySelector('canvas'), c = cv.getContext('2d'); c.scale(2, 2);
   // the face is drawn into a tiny offscreen buffer, then shown as dots: each cell lights in proportion to how much eye covers it
   const off = document.createElement('canvas'); off.width = W; off.height = H; const o = off.getContext('2d', { willReadFrequently: true });
@@ -123,7 +129,7 @@
   const colors = () => { const s = getComputedStyle(root); K = { ink: s.getPropertyValue('--ink').trim() || '#0B0E13', line: s.getPropertyValue('--ink-3').trim() || '#636B78', red: s.getPropertyValue('--accent').trim() || '#D62F24' }; queue(); };
 
   /* ---------- draw ---------- */
-  let dirty = false, typingOn = false;
+  let tx_ = { vel: () => 0 }, ty_ = { vel: () => 0 }, dirty = false, typingOn = false, cells = [], ghostN = 0, hang = null, hiddenFx = false;
   function queue() { if (!dirty) { dirty = true; requestAnimationFrame(paint); } }
   [X, Y, R, lx, ly, open, lid, tall, B, Q].forEach(s => s.on(queue));
   colors(); addEventListener('br-theme', () => requestAnimationFrame(colors));
@@ -137,9 +143,15 @@
     const t = now / 1000, dz = performance.now() < dizzyUntil, walking = !dragging && Math.abs(X.v) > 30;
     const bob = walking && !reduce() ? -Math.abs(Math.sin(t * 9.6)) * 3 : 0;            // little steps, 96 BPM x 3
     const tx = X.x, ty = floorTop() - floor - Y.x + bob - B.x, sq = clamp(Q.x, -1, 1);
-    el.style.transform = `translate(${tx}px, ${ty}px) rotate(${R.x}deg) scale(${1 + sq * 0.12}, ${1 - sq * 0.16})`;
+    if (hang) el.style.transform = `translate(${hang.x}px, ${hang.top}px) rotate(${hang.th * 57.3}deg) translateY(${H}px) scale(1, -1)`;   // upside down, swinging from the nav
+    else el.style.transform = `translate(${tx}px, ${ty}px) rotate(${R.x}deg) scale(${1 + sq * 0.12}, ${1 - sq * 0.16})`;
+    // a soft contact shadow that shrinks as it leaves the ground
+    if (!anchor && !run && !hang && !tucked && !hidden && !hiddenFx) {
+      const lift = Math.max(0, Y.x + B.x - bob), k = 1 / (1 + lift / 70);
+      shadow.style.opacity = (0.9 * k).toFixed(3); shadow.style.transform = `translate(${tx + W * 0.1}px, ${floorTop() - floor + H - 4}px) scale(${k}, ${0.6 + 0.4 * k})`;
+    } else shadow.style.opacity = 0;
     zz.style.transform = `translate(${tx + W - 6}px, ${ty - 6}px)`;
-    placeBubble(tx, ty);
+    if (hang) placeBubble(hang.x, hang.top + H + bub.offsetHeight + 40); else placeBubble(tx, ty);
 
     o.globalCompositeOperation = 'source-over'; o.clearRect(0, 0, W, H);
     const ew = 14, eh = 18, gap = 10, op = asleep ? 0.1 : clamp(open.x, 0.08, 1.2);
@@ -163,12 +175,12 @@
       }
     });
     // show it as dots: unlit cells trace the body faintly, lit cells grow with coverage (anti-aliased, so motion stays smooth)
-    const px = o.getImageData(0, 0, W, H).data; c.clearRect(0, 0, W, H);
+    const px = o.getImageData(0, 0, W, H).data; c.clearRect(0, 0, W, H); cells = [];
     for (let j = 0; j < ROWS; j++) for (let i = 0; i < COLS; i++) {
       let a = 0; for (let v = 0; v < CELL; v++) for (let u = 0; u < CELL; u++) a += px[((j * CELL + v) * W + i * CELL + u) * 4 + 3];
       a /= CELL * CELL * 255; const cx = (i + 0.5) * CELL, cy = (j + 0.5) * CELL;
-      if (a > 0.06) { c.globalAlpha = 1; c.fillStyle = K.ink; c.beginPath(); c.arc(cx, cy, 0.7 + 1.05 * a, 0, 6.283); c.fill(); }
-      else if (inBody(i, j)) { c.globalAlpha = 0.45; c.fillStyle = K.line; c.beginPath(); c.arc(cx, cy, 0.65, 0, 6.283); c.fill(); }
+      if (a > 0.06) { c.globalAlpha = 1; c.fillStyle = K.ink; c.beginPath(); c.arc(cx, cy, 0.7 + 1.05 * a, 0, 6.283); c.fill(); cells.push([cx, cy, a]); }
+      else if (inBody(i, j)) { if ((i + j) % 3 === 0) cells.push([cx, cy, 0.2]); c.globalAlpha = 0.45; c.fillStyle = K.line; c.beginPath(); c.arc(cx, cy, 0.65, 0, 6.283); c.fill(); }
     }
     c.globalAlpha = 1;
     // tiny routine props, in the same dots
@@ -188,7 +200,10 @@
       for (let i = 0; i < 3; i++) { c.globalAlpha = i === k ? 1 : 0.35; c.fillStyle = K.ink; c.beginPath(); c.arc(W / 2 + (i - 1) * CELL * 1.5, H - CELL * 1.5, 1.3, 0, 6.283); c.fill(); }
       c.globalAlpha = 1; typingOn = true;
     } else typingOn = false;
-    if (dz || walking || typingOn || run || mood === 'love') queue();
+    // afterimages when it's moving fast: motion reads as speed, not as a jump
+    const speed = dragging ? Math.hypot(tx_.vel(), ty_.vel()) : Math.hypot(X.v, Y.v);
+    if (speed > 1100 && !reduce() && (ghostN++ & 1)) ghost();
+    if (dz || walking || typingOn || run || hang || mood === 'love') queue();
   }
 
   /* ---------- thoughts ---------- */
@@ -240,9 +255,9 @@
   }
   const baseMood = () => { const s = slot(); return s.mood && !(s.decaf && caffeinated) ? s.mood : 'default'; };
   function blink(twice) { if (asleep) return; open.to(0, { then: () => open.to(1, { then: () => twice && setTimeout(() => blink(false), 120) }) }); }
-  function sleep() { if (asleep || dragging || tucked || dancing) return; asleep = true; hush(); zz.classList.add('on'); lx.to(0); ly.to(0.4); queue(); }
+  function sleep() { if (asleep || dragging || tucked || dancing || hang) return; asleep = true; hush(); zz.classList.add('on'); lx.to(0); ly.to(0.4); queue(); setTimeout(dream, 6000); }
   function wake(quiet) {
-    if (!asleep) return; asleep = false; zz.classList.remove('on'); feel('surprised', 700); blink(true);
+    if (!asleep) return; asleep = false; stopDream(); zz.classList.remove('on'); feel('surprised', 700); blink(true);
     if (!quiet && Math.random() < 0.5) setTimeout(() => say(SAY.wake), 500);
   }
 
@@ -272,7 +287,7 @@
 
   // perch on top of cards that sit at the bottom of the screen (playlist, notifications)
   function perch() {
-    if (run) return;
+    if (run || hang || hiddenFx) return;
     const away0 = document.body.classList.contains('menu-open') || !!document.querySelector('.intro, .wa.live, .refill');
     if (anchor) { if (away0 && !hidden) { hidden = true; el.classList.add('away'); hush(); } else if (!away0 && hidden) { hidden = false; el.classList.remove('away'); } return follow(); }
     let f = 0; const L = X.x, Rx = X.x + W;
@@ -291,31 +306,33 @@
   const kind = n => n.matches('img, .frame, figure img, .clip') ? 'img' : n.matches('canvas') ? 'canvas' : n.matches('.btn') ? 'btn' : n.matches('.chip') ? 'chip' : 'head';
   const sitTop = r => r.top - H + 3;                                                   // eyes peek just over the top edge
   const usable = n => { if (n.closest('.pixi, .nav, .mmenu, .wa, .vinyl, .m-toast, .intro')) return false; const r = n.getBoundingClientRect(); return r.width >= 40 && r.height >= 14 && r.top > 80 && r.top < innerHeight - H - 90 && r.left > -10 && r.right < innerWidth + 10 && getComputedStyle(n).visibility !== 'hidden'; };
-  function visit(n, why) {
-    if (!n || dragging || tucked || hidden || asleep || reduce() || !usable(n)) return false;
-    const r = n.getBoundingClientRect(), slot = clamp(r.left + Math.random() * Math.max(0, Math.min(r.width, 400) - W), PAD, maxX());
+  function visit(n, why, sx, oy) {                                                     // oy: where to stand, relative to the element's top (default: on its top edge)
+    if (!n || dragging || tucked || hidden || asleep || hang || hiddenFx || reduce() || !usable(n)) return false;
+    const r = n.getBoundingClientRect(), slot = clamp(sx ?? r.left + Math.random() * Math.max(0, Math.min(r.width, 400) - W), PAD, maxX());
     hush(); anchor = null; roamAt = performance.now();
-    const ty = floorTop() - floor - sitTop(r), dist = Math.hypot(slot - X.x, ty - Y.x);
+    const ty = floorTop() - floor - (oy != null ? r.top + oy : sitTop(r)), dist = Math.hypot(slot - X.x, ty - Y.x);
     lx.to(clamp((slot - X.x) / 300, -1, 1)); ly.to(-0.6); feel('surprised', 500);
     const resp = clamp(dist / 900, 0.4, 0.9);
     X.to(slot, { damping: 1, response: resp });
-    Y.to(ty, { velocity: Math.min(900, 300 + dist), damping: 0.72, response: resp, then: () => land(n, slot - r.left, why) });   // a hop: launch up, settle on the edge
+    Y.to(ty, { velocity: Math.min(900, 300 + dist), damping: 0.72, response: resp, then: () => land(n, slot - r.left, why, oy) });   // a hop: launch up, settle on the edge
     chirp(1); return true;
   }
-  function land(n, dx, why) {
+  function land(n, dx, why, oy) {
     if (dragging || !n.isConnected) return;
-    anchor = { n, dx: new Spring(dx, { damping: 1, response: 0.9 }).on(queue) };
+    anchor = { n, oy, dx: new Spring(dx, { damping: 1, response: 0.9 }).on(queue) };
     const k = kind(n); lx.to(0); ly.to(k === 'head' ? 0.2 : 0.9);                        // look down at what it's sitting on
     if (k === 'chip' || k === 'btn') nudge(n);
     feel(k === 'btn' ? 'default' : 'happy', 1400);
+    if (why === 'eat') return chomp(n);
     if (why !== 'end' && (why === 'follow' || Math.random() < 0.35)) setTimeout(() => anchor && anchor.n === n && muse(AT[k][Math.floor(Math.random() * AT[k].length)]), 700);
   }
   function nudge(n) { try { n.animate([{ translate: '0 0' }, { translate: '0 2px' }, { translate: '0 0' }], { duration: 260, easing: 'cubic-bezier(.16,1,.3,1)' }); } catch (e) {} }
   function follow() {                                                                   // content and Pixi move together, 1:1
     if (!anchor || dragging) return;
     const n = anchor.n, r = n.getBoundingClientRect();
-    if (!n.isConnected || r.top < 70 || sitTop(r) > floorTop() - floor || r.right < 0 || r.left > innerWidth) return drop();
-    X.set(clamp(r.left + anchor.dx.x, 4, innerWidth - W - 4)); Y.set(floorTop() - floor - sitTop(r));
+    const top = anchor.oy != null ? r.top + anchor.oy : sitTop(r);
+    if (!n.isConnected || top < 70 || top > floorTop() - floor || r.right < 0 || r.left > innerWidth) return drop();
+    X.set(clamp(r.left + anchor.dx.x, 4, innerWidth - W - 4)); Y.set(floorTop() - floor - top);
   }
   function drop() {
     if (!anchor) return; anchor = null; X.stop(); hush(); feel('surprised', 600); ly.to(0.6);
@@ -341,8 +358,9 @@
   });
 
   /* ---------- touch: tap, drag, throw, tuck ---------- */
-  const tx = BR.tracker(), ty = BR.tracker(); let g = null, pokes = [];
+  const tx = BR.tracker(), ty = BR.tracker(); tx_ = tx; ty_ = ty; let g = null, pokes = [];
   el.addEventListener('pointerdown', e => {
+    if (hang) hangEnd(true);
     el.setPointerCapture(e.pointerId); activity(); anchor = null;
     g = { x0: e.clientX, y0: e.clientY, dx: e.clientX - X.x, dy: e.clientY - (floorTop() - floor - Y.x), moved: false };
     tx.reset(); ty.reset(); X.stop(); Y.stop();
@@ -680,12 +698,191 @@
   // tap the speech bubble to dismiss: it sulks for a second
   bub.addEventListener('click', () => { if (Math.random() < 0.3) feel('tired', 900); });
 
+
+  /* ---------- effects layer: Pixi's dots can leave its body ---------- */
+  const fc = fx.getContext('2d'); let FW = 0, FH = 0, P = [], fxRaf = 0, fxLast = 0;
+  const fxSize = () => { const d = Math.min(2, devicePixelRatio || 1); FW = innerWidth; FH = innerHeight; fx.width = FW * d; fx.height = FH * d; fc.setTransform(d, 0, 0, d, 0, 0); };
+  fxSize(); addEventListener('resize', fxSize);
+  const ease = p => 1 - Math.pow(1 - p, 4), easeIO = p => p < 0.5 ? 8 * p ** 4 : 1 - Math.pow(-2 * p + 2, 4) / 2;
+  function emit(p) { P.push(p); if (!fxRaf) { fxLast = performance.now(); fxRaf = requestAnimationFrame(fxTick); } }
+  function fxTick(t) {
+    const dt = Math.min(0.05, (t - fxLast) / 1000); fxLast = t; fc.clearRect(0, 0, FW, FH);
+    P = P.filter(p => {
+      const age = t - p.t0;
+      if (age < 0) { p.draw && dot(p.fx, p.fy, p.r, p.col, p.a0 ?? 1); return true; }
+      if (p.kind === 'path') {                                                                 // along a curve, out and (optionally) back
+        const go = p.dur, hold = p.hold || 0, back = p.back ? p.dur : 0; if (age > go + hold + back) { p.done && p.done(); return false; }
+        let e = age < go ? easeIO(age / go) : age < go + hold ? 1 : 1 - easeIO((age - go - hold) / back);
+        const u = 1 - e, x = u * u * p.fx + 2 * u * e * p.cx + e * e * p.tx, y = u * u * p.fy + 2 * u * e * p.cy + e * e * p.ty;
+        dot(x, y, p.r * (p.grow ? 0.8 + 0.4 * Math.sin(e * Math.PI) : 1), p.col, p.fade ? 1 - e * 0.9 : 1); return true;
+      }
+      if (age > p.life) return false;                                                          // free particles: velocity, gravity, drag, fade
+      p.vx *= 1 - p.drag * dt; p.vy = p.vy * (1 - p.drag * dt) + p.g * dt; p.x += p.vx * dt; p.y += p.vy * dt;
+      dot(p.x, p.y, p.r, p.col, (p.a0 ?? 1) * (1 - age / p.life)); return true;
+    });
+    fxRaf = P.length ? requestAnimationFrame(fxTick) : 0;
+  }
+  function dot(x, y, r, col, a) { fc.globalAlpha = Math.max(0, a); fc.fillStyle = col === 'red' ? K.red : K.ink; fc.beginPath(); fc.arc(x, y, r, 0, 6.283); fc.fill(); fc.globalAlpha = 1; }
+  // where each of Pixi's dots is on screen right now (follows its rotation and squash)
+  function dotsScreen() {
+    let m; try { m = new DOMMatrixReadOnly(getComputedStyle(el).transform); } catch (e) { return []; }
+    const oy = hang ? 0 : H;
+    return cells.map(([x, y, a]) => { const q = m.transformPoint({ x: x - W / 2, y: y - oy }); return { x: q.x + W / 2, y: q.y + oy, a, lx: x, ly: y }; });
+  }
+  function ghost() { const now = performance.now(); dotsScreen().forEach(d => d.a > 0.3 && emit({ kind: 'free', x: d.x, y: d.y, vx: 0, vy: 0, g: 0, drag: 0, r: 1.2, a0: 0.25, life: 170, t0: now })); }
+
+  // dissolve into dots, fly somewhere along curved paths, reassemble
+  function teleport(toX, toTop, done, from) {
+    const src = from || dotsScreen(); if (reduce() || !src.length) { X.set(toX); Y.set(floorTop() - floor - toTop); done && done(); return; }
+    hiddenFx = true; hush(); cv.style.visibility = 'hidden'; const now = performance.now(); let longest = 0;
+    src.forEach((d, i) => {
+      const tx = toX + d.lx, ty = toTop + d.ly, mx = (d.x + tx) / 2, my = (d.y + ty) / 2, n = Math.hypot(tx - d.x, ty - d.y) || 1;
+      const bend = (Math.random() - 0.5) * Math.min(260, n * 0.6), delay = Math.random() * 160 + (d.a < 0.3 ? 60 : 0), dur = 620 + Math.random() * 380;
+      longest = Math.max(longest, delay + dur);
+      emit({ kind: 'path', fx: d.x, fy: d.y, tx, ty, cx: mx - (ty - d.y) / n * bend, cy: my + (tx - d.x) / n * bend, r: d.a < 0.3 ? 0.8 : 0.7 + 1.05 * d.a, a0: d.a < 0.3 ? 0.4 : 1, grow: true, dur, t0: now + delay, draw: true });
+    });
+    chirp(3);
+    setTimeout(() => { X.set(toX); Y.set(floorTop() - floor - toTop); R.set(0); cv.style.visibility = ''; hiddenFx = false; squash(0.6); blink(); queue(); done && done(); }, longest);
+  }
+
+  // dot art: its eye dots float up and draw a little picture, then come home
+  const ICONS = {
+    star: ['...#...', '..###..', '#######', '.#####.', '..###..', '.##.##.', '#.....#'],
+    cup: ['.......', '#####..', '#####.#', '#####.#', '######.', '.####..', '.......'],
+    moon: ['..###..', '.##....', '##.....', '##.....', '##.....', '.##....', '..###..'],
+    heart: ['.......', '.##.##.', '#######', '#######', '.#####.', '..###..', '...#...'],
+    note: ['...###.', '...#.#.', '...#.#.', '...#.#.', '.###.#.', '####...', '.##....'],
+  };
+  function perform(name) {
+    const art = ICONS[name], src = dotsScreen().filter(d => d.a > 0.3); if (!art || !src.length || reduce()) return;
+    const pts = []; art.forEach((row, j) => [...row].forEach((ch, i) => ch === '#' && pts.push([i, j])));
+    const S = 6, top = floorTop() - floor - Y.x - 22 - art.length * S, left = clamp(X.x + W / 2 - (art[0].length * S) / 2, 8, innerWidth - art[0].length * S - 8), now = performance.now();
+    open.to(0.12); lx.to(0); ly.to(-1); feel('happy', 3400);
+    pts.forEach(([i, j], k) => { const d = src[k % src.length], tx = left + i * S, ty = top + j * S;
+      emit({ kind: 'path', fx: d.x, fy: d.y, tx, ty, cx: (d.x + tx) / 2 + (Math.random() - 0.5) * 60, cy: Math.min(d.y, ty) - 30, r: 1.9, col: name === 'heart' ? 'red' : 'ink', dur: 700 + Math.random() * 200, hold: 1500, back: true, t0: now + k * 12 }); });
+    chirp(2); setTimeout(() => { open.to(1); ly.to(0); squash(0.4); }, 3100);
+  }
+
+  // fireworks from its dots
+  function fireworks(x, y, n = 60) {
+    const now = performance.now();
+    for (let i = 0; i < n; i++) { const a = Math.random() * 6.283, v = 160 + Math.random() * 340;
+      emit({ kind: 'free', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 120, g: 520, drag: 1.4, r: 1.2 + Math.random() * 1.2, col: i % 3 ? 'ink' : 'red', life: 900 + Math.random() * 700, t0: now }); }
+  }
+
+  /* ---------- surprises ---------- */
+  let surpriseAt = performance.now();
+  function surprise() {
+    if (reduce() || anchor || run || hang || dragging || tucked || hidden) return lookAround();
+    surpriseAt = performance.now(); const r = Math.random();
+    if (r < 0.28) return perform(Object.keys(ICONS)[Math.floor(Math.random() * 5)]);
+    if (r < 0.5) return eatDot() || hangStart();
+    if (r < 0.75) return hangStart() || perform('star');
+    const spot = roamPick(); if (!spot) return perform('heart');
+    const sr = spot.getBoundingClientRect(), x = clamp(sr.left + Math.random() * Math.max(0, Math.min(sr.width, 300) - W), PAD, maxX());
+    teleport(x, sitTop(sr), () => { anchor = { n: spot, dx: new Spring(x - sr.left, { damping: 1, response: 0.9 }).on(queue) }; quip('Shortcut.', 'wink', 0.6, 'teleport', true); });
+  }
+
+  // hang upside down from the nav and swing; push it with the cursor
+  function hangStart() {
+    const nav = document.querySelector('.nav'); if (!nav || reduce()) return false;
+    const nb = nav.getBoundingClientRect().bottom; if (nb < 20) return false;
+    const x = clamp(innerWidth * (0.3 + Math.random() * 0.4), PAD, maxX());
+    teleport(x, nb, () => {
+      hang = { x, top: nb, th: 0.5 * (Math.random() < 0.5 ? 1 : -1), w: 0, last: performance.now(), until: performance.now() + 14000 };
+      el.style.transformOrigin = '50% 0'; feel('happy', 0); requestAnimationFrame(hangStep);
+      setTimeout(() => quip('Hi from up here.', 'happy', 1, 'hang', true), 500);
+    });
+    return true;
+  }
+  function hangStep(t) {
+    if (!hang) return; const dt = Math.min(0.04, (t - hang.last) / 1000); hang.last = t;
+    const nav = document.querySelector('.nav'), nb = nav ? nav.getBoundingClientRect().bottom : -1;
+    if (nb < 10 || t > hang.until || hidden) return hangEnd();
+    hang.top = nb; const w0 = 2 * Math.PI * 0.75;                                              // a real pendulum: gravity, a little air drag
+    hang.w += (-w0 * w0 * Math.sin(hang.th) - 0.5 * hang.w) * dt; hang.th += hang.w * dt;
+    queue(); requestAnimationFrame(hangStep);
+  }
+  addEventListener('pointermove', e => {                                                       // brush past it and it swings
+    if (!hang || e.pointerType === 'touch') return;
+    const cx = hang.x + W / 2, cy = hang.top + H / 2, d = Math.hypot(e.clientX - cx, e.clientY - cy);
+    if (d < 70) hang.w += clamp(e.movementX || 0, -40, 40) * 0.02;
+  }, { passive: true });
+  function hangEnd(quiet) {
+    if (!hang) return; const h = hang; hang = null; el.style.transformOrigin = '';
+    X.set(clamp(h.x + Math.sin(h.th) * H, PAD, maxX())); Y.set(floorTop() - floor - h.top); R.set(180 + h.th * 57.3);
+    if (quiet) { R.to(0); return; }
+    R.to(0, { damping: 0.8, response: 0.5 }); Y.to(0, { damping: 0.5, response: 0.5, then: () => { squash(0.8); feel('happy', 900); setTimeout(() => walkTo(home()), 700); } });   // drops and lands on its feet
+  }
+
+  // eat the red full stop at the end of a headline, then give it back
+  function eatDot() {
+    const dots = [...document.querySelectorAll('.dot')].filter(d => { const h = d.closest('h1, h2, .display'); return h && usable(h); });
+    if (!dots.length) return false; const d = dots[Math.floor(Math.random() * dots.length)], h = d.closest('h1, h2, .display'), dr = d.getBoundingClientRect();
+    const hr = h.getBoundingClientRect(), room = dr.right + 6 + W < innerWidth - 8;
+    return visit(h, 'eat', room ? dr.right + 6 : dr.left + dr.width / 2 - W / 2, (room ? dr.bottom - dr.height * 0.2 - H + 3 : dr.bottom - dr.height * 0.32 - H + 2) - hr.top);   // stand on the line, right beside the dot
+  }
+  function chomp(h) {
+    const d = h.querySelector('.dot'); if (!d) return; const dr = d.getBoundingClientRect();
+    const ex = X.x + W / 2 - (dr.left + dr.width / 2), ey = floorTop() - floor - Y.x + H / 2 - (dr.top + dr.height / 2);
+    lx.to(clamp(-ex / 40, -1, 1)); ly.to(0.6); open.to(1.25, { velocity: 6 });
+    setTimeout(() => {
+      const eat = d.animate([{ transform: 'none', opacity: 1 }, { transform: `translate(${ex}px, ${ey}px) scale(.3)`, opacity: 0 }], { duration: 380, easing: 'cubic-bezier(.5,0,.75,0)', fill: 'forwards' });
+      eat.onfinish = () => { let n = 0; const iv = setInterval(() => { squash(0.5); chirp(1); if (++n >= 3) clearInterval(iv); }, 170); feel('happy', 1800); quip('Mm. Punctuation.', null, 1, 'eat', true);
+        setTimeout(() => { eat.cancel(); d.animate([{ transform: `translate(${ex}px, ${ey}px) scale(.3)`, opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 700, easing: 'cubic-bezier(.34,1.56,.64,1)' }); kick(0.8); feel('wink', 1200); }, 3600); };
+    }, 500);
+  }
+
+  // dreams: while asleep, a thought bubble cycles through little dot pictures
+  let dreamIv = 0;
+  function dream() {
+    if (!asleep || hidden || tucked) return; clearInterval(typing); clearTimeout(hideT);
+    const names = ['star', 'moon', 'cup', 'note', 'heart'], q = document.createElement('canvas'), Sz = 5, N = 7;
+    q.width = q.height = N * Sz * 2; q.style.cssText = `width:${N * Sz}px;height:${N * Sz}px;display:block`;
+    const qc = q.getContext('2d'); qc.scale(2, 2); let k = Math.floor(Math.random() * names.length);
+    const draw = () => { qc.clearRect(0, 0, N * Sz, N * Sz); ICONS[names[k++ % names.length]].forEach((row, j) => [...row].forEach((ch, i) => {
+      qc.globalAlpha = ch === '#' ? 1 : 0.18; qc.fillStyle = ch === '#' ? K.ink : K.line; qc.beginPath(); qc.arc(i * Sz + Sz / 2, j * Sz + Sz / 2, ch === '#' ? 1.7 : 0.7, 0, 6.283); qc.fill(); })); };
+    draw(); bub.querySelector('.sr').textContent = 'Pixi is dreaming.'; const tEl = bub.querySelector('.t'); tEl.textContent = ''; tEl.append(q);
+    bub.style.visibility = 'visible'; placeBubble(X.x, floorTop() - floor - Y.x); sayOn.to(0.9); dreamIv = setInterval(draw, 1700);
+  }
+  function stopDream() { if (dreamIv) { clearInterval(dreamIv); dreamIv = 0; hush(); } }
+
+  // travelling between pages: the dots stream into the link you clicked, and reassemble on the next page
+  document.addEventListener('click', e => {
+    const a = e.target.closest('a[href]'); if (!a || e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey || a.target === '_blank') return;
+    let u; try { u = new URL(a.href, location.href); } catch (er) { return; }
+    if (u.origin !== location.origin || u.pathname === location.pathname || tucked || hidden || reduce()) return;
+    const r = a.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+    try { sessionStorage.setItem('br-pixi-arrive', JSON.stringify({ x, y })); } catch (er) {}
+    const now = performance.now(); dotsScreen().forEach(d => emit({ kind: 'path', fx: d.x, fy: d.y, tx: x, ty: y, cx: (d.x + x) / 2, cy: Math.min(d.y, y) - 80, r: 1.2, dur: 420 + Math.random() * 200, t0: now, fade: true }));
+    cv.style.visibility = 'hidden'; shadow.style.opacity = 0;
+  });
+  let arrive = null; try { arrive = JSON.parse(sessionStorage.getItem('br-pixi-arrive') || 'null'); sessionStorage.removeItem('br-pixi-arrive'); } catch (e) {}
+  if (arrive && !tucked && !reduce()) {
+    hiddenFx = true; cv.style.visibility = 'hidden';
+    setTimeout(() => {
+      const top = floorTop() - floor - Y.x, from = [];
+      for (let j = 0; j < ROWS; j++) for (let i = 0; i < COLS; i++) if (inBody(i, j) && ((i + j) % 2 === 0)) from.push({ x: arrive.x + (Math.random() - 0.5) * 30, y: arrive.y + (Math.random() - 0.5) * 16, a: 0.5, lx: (i + 0.5) * CELL, ly: (j + 0.5) * CELL });
+      teleport(X.x, top, () => { hop(10); feel('happy', 900); }, from);
+    }, 380);
+  }
+
+  // the old cheat code
+  const KONAMI = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a']; let kq = [];
+  addEventListener('keydown', e => {
+    kq.push(e.key.length === 1 ? e.key.toLowerCase() : e.key); kq = kq.slice(-10);
+    if (kq.join() === KONAMI.join()) { kq = []; if (tucked) untuck(); wake(true);
+      const cx = X.x + W / 2, cy = floorTop() - floor - Y.x; flip(); feel('love', 2600);
+      [0, 260, 520].forEach((d, i) => setTimeout(() => fireworks(i ? cx + (Math.random() - 0.5) * 300 : cx, i ? cy - 120 - Math.random() * 160 : cy), d));
+      setTimeout(() => say('Cheat code accepted. +30 lives.'), 700); }
+  });
+
   /* ---------- a life of its own ---------- */
   (function blinks() { setTimeout(() => { if (!document.hidden) blink(Math.random() < 0.2); blinks(); }, 2200 + Math.random() * 3800); })();
   (function idle() {
     setTimeout(() => {
       idle();
-      if (document.hidden || dragging || tucked || hidden || dancing || run) return;
+      if (document.hidden || dragging || tucked || hidden || dancing || run || hang || hiddenFx) return;
       const quiet = performance.now() - lastAct;
       if (quiet > (slot().sleepy ? 20000 : 45000)) return sleep();
       if (asleep) return;
@@ -693,6 +890,7 @@
       const r = Math.random();
       if (anchor) { if (r < 0.3) shuffle(); else if (r < 0.5) { drop(); } else if (r < 0.62) visit(roamPick(), 'roam') || lookAround(); else if (r < 0.8) lookAround(); else muse(); return; }
       if (r < 0.14 && performance.now() - roamAt > 15000) { roam(); return; }
+      if (r > 0.86 && r <= 0.94 && performance.now() - surpriseAt > 45000) return surprise();
       if (r > 0.94) return (mood === 'tired' ? yawn : Math.random() < 0.15 ? sneeze : Math.random() < 0.5 ? peekOut : stretch)();
       if (r < 0.32) lookAround();
       else if (r < 0.52 && !reduce()) wander();
@@ -713,5 +911,5 @@
 
   feel(baseMood(), 0); queue();
   setInterval(() => { if (mood === 'default' || mood === 'tired') feel(baseMood(), 0); queue(); }, 60000);
-  window.__pixi = { roam, visit, drop, say };                                        // handy from the console
+  window.__pixi = { roam, visit, drop, say, perform, hangStart, eatDot, surprise, teleport, fireworks, sleep };                                        // handy from the console
 })();
