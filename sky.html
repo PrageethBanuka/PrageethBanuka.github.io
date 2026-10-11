@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Sans:wdth,wght@75..100,400..700&display=swap">
-<link rel="stylesheet" href="assets/site.css?v=20261011w">
+<link rel="stylesheet" href="assets/site.css?v=20261011x">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="canonical" href="https://prageethbanuka.github.io/sky.html">
 <meta name="theme-color" content="#0B0E13">
@@ -21,15 +21,21 @@
 <style>
 .maker { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 32px clamp(32px, 5vw, 72px); align-items: start; }
 @media (max-width: 900px) { .maker { grid-template-columns: 1fr; } }
+.stage .label { text-align: center; text-wrap: balance; }
 .stage { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 84px); display: grid; justify-items: center; gap: 12px; }
 @media (max-width: 900px) { .stage { position: static; } }
 .poster { width: min(100%, 460px); aspect-ratio: 3 / 4; border-radius: 6px; box-shadow: 0 1px 0 var(--line), 0 30px 70px -30px rgba(0,0,0,.45); display: block; transition: transform 100ms ease-out; touch-action: pan-y; }
 .form { display: grid; gap: 22px; }
 .field { display: grid; gap: 8px; }
 .field .label { color: var(--ink-3); }
-.two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.in { font: inherit; font-size: 1rem; color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; min-height: 48px; width: 100%; }
+.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+.field { min-width: 0; }
+.in { box-sizing: border-box; min-width: 0; max-width: 100%; -webkit-appearance: none; appearance: none; font: inherit; font-size: 1rem; color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; min-height: 48px; width: 100%; }
 .in:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
+/* iOS Safari gives date/time inputs a fixed intrinsic width and centred text; make them behave like the other fields */
+input[type=date].in, input[type=time].in { display: block; text-align: left; line-height: 22px; }
+.in::-webkit-date-and-time-value { text-align: left; margin: 0; }
+.in::-webkit-datetime-edit { padding: 0; }
 select.in { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--ink-3) 50%), linear-gradient(135deg, var(--ink-3) 50%, transparent 50%); background-position: calc(100% - 20px) 50%, calc(100% - 15px) 50%; background-size: 5px 5px; background-repeat: no-repeat; }
 .seg { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 999px; flex-wrap: wrap; }
 .seg button { font: inherit; font-size: .9rem; border: 0; background: transparent; color: var(--ink-2); padding: 8px 14px; border-radius: 999px; cursor: pointer; min-height: 36px; }
@@ -44,7 +50,7 @@ select.in { appearance: none; background-image: linear-gradient(45deg, transpare
 <script data-goatcounter="https://banuka.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 </head>
 <body>
-<script src="assets/site.js?v=20261011w"></script>
+<script src="assets/site.js?v=20261011x"></script>
 <script>BR.nav('offhours')</script>
 
 <main>
