@@ -186,6 +186,24 @@
     set({ id: 'draw', prio: 6, say: 'Pixi is drawing a portrait', html: `<span class="ring" style="--p:${d.progress}"></span><span>Pixi is drawing</span><span class="mono" data-pct>${pct}%</span>` });
   });
 
+  // a secret found; hide and seek with a running clock and a give-up button
+  let seekIv = 0;
+  addEventListener('br-activity', e => {
+    const d = e.detail;
+    if (d.id === 'secret') set({ id: 'secret', prio: 9, ttl: 2600, say: `Secret found: ${d.name}`,
+      html: `<svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.6 7.4L22 12l-7.4 2.6L12 22l-2.6-7.4L2 12l7.4-2.6z" fill="#FF5A4C"/></svg><span>${d.name}</span><span class="mono">${d.n}/${d.of}</span>` });
+    if (d.id === 'seek') {
+      clearInterval(seekIv);
+      if (d.done) { clear('seek'); if (d.found) set({ id: 'seek-done', prio: 7, ttl: 2000, say: `Found in ${d.secs} seconds`, html: `${ICON.tick}<span>Found in ${d.secs} s</span>` }); return; }
+      const fmt = () => { const s = Math.floor((Date.now() - d.t0) / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+      set({ id: 'seek', prio: 4, say: 'Hide and seek: Pixi is hiding somewhere on this page',
+        html: `<span class="eq"><i style="height:6px;background:#F2F3F1"></i><i style="height:6px;background:#F2F3F1"></i></span><span>Find Pixi</span><span class="mono" data-seek>0:00</span>`,
+        xhtml: `<div class="row"><span>Pixi is hiding on this page</span><span class="mono" data-seek>0:00</span></div><div class="row"><span class="mono">Scroll and look for two eyes</span><button type="button" data-giveup>Give up</button></div>`,
+        wire: n => { const g = n.querySelector('[data-giveup]'); g && g.addEventListener('click', () => dispatchEvent(new Event('br-seek-giveup'))); } });
+      seekIv = setInterval(() => { isl.querySelectorAll('[data-seek]').forEach(x => { x.textContent = fmt(); }); }, 1000);
+    }
+  });
+
   /* ---------- 3. magnetic controls (mouse and trackpad only) ---------- */
   if (fine.matches && !reduce()) {
     const SEL = '.btn, .pill, .tool, .menu-btn, .nav-links a, .chip, .seg button';

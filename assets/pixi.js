@@ -324,6 +324,7 @@
     if (k === 'chip' || k === 'btn') nudge(n);
     feel(k === 'btn' ? 'default' : 'happy', 1400);
     if (why === 'eat') return chomp(n);
+    if (why === 'press' && pressCb) { const f = pressCb; pressCb = null; ly.to(0.9); return void setTimeout(() => { squash(0.9); kick(0.35); nudge(n); chirp(1); f(n); }, 320); }
     if (why !== 'end' && (why === 'follow' || Math.random() < 0.35)) setTimeout(() => anchor && anchor.n === n && muse(AT[k][Math.floor(Math.random() * AT[k].length)]), 700);
   }
   function nudge(n) { try { n.animate([{ translate: '0 0' }, { translate: '0 2px' }, { translate: '0 0' }], { duration: 260, easing: 'cubic-bezier(.16,1,.3,1)' }); } catch (e) {} }
@@ -331,6 +332,7 @@
     if (!anchor || dragging) return;
     const n = anchor.n, r = n.getBoundingClientRect();
     const top = anchor.oy != null ? r.top + anchor.oy : sitTop(r);
+    if (anchor.keep) { if (!n.isConnected) return seekEnd(false); X.set(r.left + anchor.dx.x); Y.set(floorTop() - floor - top); return; }   // hiding: stays put, even off-screen
     if (!n.isConnected || top < 70 || top > floorTop() - floor || r.right < 0 || r.left > innerWidth) return drop();
     X.set(clamp(r.left + anchor.dx.x, 4, innerWidth - W - 4)); Y.set(floorTop() - floor - top);
   }
@@ -365,7 +367,7 @@
     g = { x0: e.clientX, y0: e.clientY, dx: e.clientX - X.x, dy: e.clientY - (floorTop() - floor - Y.x), moved: false };
     tx.reset(); ty.reset(); X.stop(); Y.stop();
     open.to(0.8); tall.to(0.92);                                                         // squish on press: instant feedback
-    const mine = g; g.hold = setTimeout(() => { if (g === mine && !g.moved) { g.long = true; feel('love', 2600); purr(); squash(0.4); quip('Hold me closer, tiny dancer.', null, 1, 'hold'); } }, 550);
+    const mine = g; g.hold = setTimeout(() => { if (g === mine && !g.moved) { g.long = true; feel('love', 2600); purr(); squash(0.4); quip('Hold me closer, tiny dancer.', null, 1, 'hold'); secret('hold'); } }, 550);
   });
   el.addEventListener('pointermove', e => {
     if (!g) return;
@@ -403,6 +405,7 @@
   el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tap(); } });
 
   function tap() {
+    if (seek) return seekEnd(true);
     if (tucked) { untuck(); return; }
     if (asleep) { wake(true); setTimeout(() => say(SAY.wake), 400); return; }
     if (offerDraw) { hush(); return void drawPortrait(); }
@@ -418,7 +421,7 @@
     Y.to(-(H - 11), { velocity: -vy, damping: 0.8, response: 0.4 }); R.to(0); feel('tired', 0); lx.to(0); ly.to(-1);
   }
   function untuck() {
-    tucked = false; store.set('br-pixi', ''); feel('surprised', 600);
+    secret('tuck'); tucked = false; store.set('br-pixi', ''); feel('surprised', 600);
     Y.to(0, { velocity: 260, damping: 0.6, response: 0.4 }); setTimeout(() => say(SAY.untuck, { mood: 'happy' }), 450);
   }
 
@@ -497,7 +500,7 @@
   }, { passive: true });
   el.addEventListener('pointerenter', e => {
     if (e.pointerType === 'touch') return; feel('happy', 0); clearTimeout(petT);
-    petT = setTimeout(() => { if (performance.now() - pettedAt > 20000) { pettedAt = performance.now(); squash(0.5); purr(); say('Petting accepted.', { mood: 'happy' }); } }, 1600);
+    petT = setTimeout(() => { if (performance.now() - pettedAt > 20000) { pettedAt = performance.now(); squash(0.5); purr(); say('Petting accepted.', { mood: 'happy' }); secret('pet'); } }, 1600);
   });
   el.addEventListener('pointerleave', () => { clearTimeout(petT); if (!dancing) { feel(baseMood(), 0); R.to(0); } });
   function purr() {
@@ -594,7 +597,7 @@
     if (!tired) return fall();
     tiredAt = performance.now(); feel('tired', 0); ly.to(0.8);
     let n = 0; const pant = setInterval(() => { squash(0.5); if (++n > 9) clearInterval(pant); }, 200);   // out of breath
-    setTimeout(() => say('Okay. Cardio done. For the year.', { mood: 'tired' }), 400);
+    setTimeout(() => say('Okay. Cardio done. For the year.', { mood: 'tired' }), 400); secret('cardio');
     setTimeout(() => { if (!dragging && !run) { fall(); if (Math.random() < 0.6) hiccups(); } }, 3200);
   }
   function fall() { if (dragging) return; Y.to(0, { damping: 0.5, response: 0.45, then: () => { feel(baseMood(), 0); setTimeout(() => !anchor && !run && walkTo(home()), 900); } }); }
@@ -611,7 +614,7 @@
   function flip() {                                                                       // a backflip, from wherever it is
     feel('happy', 1200); B.to(0, { velocity: 260 }); chirp(3);
     R.to(R.x - 360, { damping: 1, response: 0.55, then: () => R.set(0) });
-    setTimeout(() => quip('Ta-da.', 'wink', 0.6, 'flip', true), 600);
+    setTimeout(() => quip('Ta-da.', 'wink', 0.6, 'flip', true), 600); secret('flip');
   }
   function waveBye() { let n = 0; const iv = setInterval(() => { R.to(n % 2 ? -10 : 10, { damping: 0.6, response: 0.15 }); if (++n > 5) { clearInterval(iv); R.to(0); } }, 160); hop(8); }
   function sneeze() { open.to(0.15, { then: () => setTimeout(() => { open.to(1.2, { velocity: 10 }); kick(1.2); squash(-1); chirp(1); quip('Achoo. Dust in the circuits.', null, 0.7, 'sneeze'); }, 380) }); }
@@ -627,7 +630,7 @@
     spinT = t; if (d < 20) return; const a = Math.atan2(dy, dx);
     if (spinPrev !== null) { let da = a - spinPrev; if (da > Math.PI) da -= 2 * Math.PI; if (da < -Math.PI) da += 2 * Math.PI; spinA += da; }
     spinPrev = a;
-    if (Math.abs(spinA) > Math.PI * 4) { spinA = 0; dizzyUntil = t + 1800; queue(); R.to(Math.sign(spinA || 1) * 12, { then: () => R.to(0) }); quip('Stop. The room is spinning.', 'surprised', 1, 'circles', true); }
+    if (Math.abs(spinA) > Math.PI * 4) { spinA = 0; dizzyUntil = t + 1800; queue(); R.to(Math.sign(spinA || 1) * 12, { then: () => R.to(0) }); quip('Stop. The room is spinning.', 'surprised', 1, 'circles', true); secret('dizzy'); }
   }, { passive: true });
 
   // laser pointer: jiggle the cursor near it and it crouches, then pounces
@@ -659,7 +662,8 @@
     if (e.key.length !== 1 || e.metaKey || e.ctrlKey || e.altKey || e.target.closest('input, textarea, select, [contenteditable]')) return;
     typed = (typed + e.key.toLowerCase()).slice(-12);
     if (!asleep && !tucked && !anchor) { squash(0.15); ly.to(0.9); }                                     // it watches you type
-    if (typed.endsWith('pixi')) { typed = ''; wake(true); hop(16); feel('love', 1600); quip('That’s me!', null, 1, 'name', true); }
+    if (typed.endsWith('seek') || typed.endsWith('hide')) { typed = ''; hideSeek(); }
+    else if (typed.endsWith('pixi')) { typed = ''; secret('name'); wake(true); hop(16); feel('love', 1600); quip('That’s me!', null, 1, 'name', true); }
     else if (typed.endsWith('dance')) { typed = ''; wake(true); let n = 0; const iv = setInterval(() => { kick(0.8); swing = -swing; R.to(10 * swing); if (++n >= 16) { clearInterval(iv); R.to(0); } }, 312); feel('happy', 5200); }
     else if (typed.endsWith('flip')) { typed = ''; flip(); }
     else if (typed.endsWith('banuka') || typed.endsWith('draw') || typed.endsWith('selfie')) { typed = ''; drawPortrait(); }
@@ -777,6 +781,8 @@
   function surprise() {
     if (reduce() || anchor || run || hang || dragging || tucked || hidden) return lookAround();
     surpriseAt = performance.now(); const r = Math.random();
+    if (r > 0.88 && hideSeek()) return;
+    if (r > 0.6 && tinker()) return;
     let drew = '1'; try { drew = sessionStorage.getItem('br-pixi-drew') || ''; } catch (e) {}
     if (r < 0.12 && !drew) { try { sessionStorage.setItem('br-pixi-drew', '1'); } catch (e) {} if (drawPortrait()) return; }
     if (r < 0.28) return perform(Object.keys(ICONS)[Math.floor(Math.random() * 5)]);
@@ -878,7 +884,7 @@
     if (kq.join() === KONAMI.join()) { kq = []; if (tucked) untuck(); wake(true);
       const cx = X.x + W / 2, cy = floorTop() - floor - Y.x; flip(); feel('love', 2600);
       [0, 260, 520].forEach((d, i) => setTimeout(() => fireworks(i ? cx + (Math.random() - 0.5) * 300 : cx, i ? cy - 120 - Math.random() * 160 : cy), d));
-      setTimeout(() => say('Cheat code accepted. +30 lives.'), 700); }
+      setTimeout(() => say('Cheat code accepted. +30 lives.'), 700); secret('konami'); }
   });
 
 
@@ -1008,7 +1014,7 @@
       portrait.sig = performance.now() + 250;                                                   // signs it with the red star
       lx.to(0); ly.to(0.6); feel('happy', 1600); hop(12); chirp(3);
       anchor = { n: card, oy: -H + 3, dx: new Spring(X.x - left, { damping: 1, response: 0.9 }).on(queue) };
-      setTimeout(() => say('Drew us. The glasses took the longest.', { mood: 'happy' }), 700);
+      setTimeout(() => say('Drew us. The glasses took the longest.', { mood: 'happy' }), 700); secret('portrait');
       portrait.idle = setTimeout(() => closePortrait(), 22000);
     }
     portrait.raf = requestAnimationFrame(frame);
@@ -1043,12 +1049,121 @@
   });
   document.addEventListener('pointerout', e => { if (e.target.closest && e.target.closest('mark, .brand')) clearTimeout(nameT); });
 
+
+  /* ---------- secrets: little things to find, collected in the footer ---------- */
+  const SECRETS = [
+    ['name', 'Said its name', 'Type its name'], ['pet', 'Petted Pixi', 'Rest a while on it'], ['hold', 'Heart eyes', 'A long hold'],
+    ['flip', 'Backflip', 'Twice, quickly'], ['dizzy', 'Made it dizzy', 'Round and round'], ['cardio', 'Cardio on the wave', 'Drop it on the signal'],
+    ['portrait', 'Got a portrait', 'Type “draw”'], ['seek', 'Found it hiding', 'Type “seek”'], ['tuck', 'Woke it from a nap', 'Tuck it under the edge'],
+    ['timelapse', 'Watched the sky turn', 'Off-hours, after dark or not'], ['owl', 'Night owl', 'Come back after midnight'], ['konami', 'Cheat code', '↑ ↑ ↓ ↓ ← → ← → B A'],
+  ];
+  let got = new Set(); try { got = new Set(JSON.parse(store.get('br-pixi-found') || '[]')); } catch (e) {}
+  function secret(id) {
+    if (got.has(id)) return; got.add(id); store.set('br-pixi-found', JSON.stringify([...got]));
+    const s = SECRETS.find(x => x[0] === id); if (!s) return;
+    dispatchEvent(new CustomEvent('br-activity', { detail: { id: 'secret', name: s[1], n: got.size, of: SECRETS.length } }));
+    renderSecrets(); if (got.size === SECRETS.length) setTimeout(() => { fireworks(X.x + W / 2, floorTop() - floor - Y.x, 90); say('All of them. You know me better than I do.', { mood: 'love' }); }, 1600);
+  }
+  const scss = document.createElement('style');
+  scss.textContent = `
+  .sec-btn { font: inherit; letter-spacing: inherit; text-transform: inherit; color: var(--ink-3); background: none; border: 0; padding: 4px 0; cursor: pointer; }
+  .sec-btn:hover { color: var(--ink); } .sec-btn b { color: var(--accent); font-weight: 500; }
+  .sec-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; text-transform: none; letter-spacing: .02em; }
+  .sec-list li { color: var(--ink-3); } .sec-list li.got { color: var(--ink); } .sec-list li.got::before { content: "✦ "; color: var(--accent); } .sec-list li:not(.got)::before { content: "· "; }
+  .pixi.peek canvas { clip-path: inset(0 0 46% 0); }`;
+  document.head.appendChild(scss);
+  function renderSecrets() {
+    document.querySelectorAll('[data-secrets]').forEach(dd => {
+      if (!got.size) { dd.innerHTML = ''; return; }
+      const open = dd.querySelector('.sec-list') && !dd.querySelector('.sec-list').hidden;
+      dd.innerHTML = `<button class="sec-btn" type="button" aria-expanded="${open}">Secrets · <b>${got.size}</b> of ${SECRETS.length}</button>
+        <ul class="sec-list"${open ? '' : ' hidden'}>${SECRETS.map(([id, name, hint]) => got.has(id) ? `<li class="got">${name}</li>` : `<li>${hint}</li>`).join('')}</ul>`;
+      const b = dd.querySelector('.sec-btn'), l = dd.querySelector('.sec-list');
+      b.addEventListener('click', () => { l.hidden = !l.hidden; b.setAttribute('aria-expanded', !l.hidden); BR.blip('tick'); });
+    });
+  }
+  renderSecrets();
+  { const h = clock().h; if (h >= 0 && h < 4) setTimeout(() => secret('owl'), 4000); }
+
+  /* ---------- hide and seek: it hides somewhere on the page with just its eyes showing ---------- */
+  let seek = null;
+  function hideSeek() {
+    if (seek || (portrait && !portrait.done) || hang || run || dragging || hiddenFx || reduce()) return false;
+    if (tucked) { tucked = false; store.set('br-pixi', ''); }
+    const all = [...document.querySelectorAll('h2, .h2, .h3, .btn, figure img, .frame, canvas, .card, .chip, .label')].filter(n => {
+      if (n.closest('.pixi, .nav, .mmenu, .wa, .vinyl, .m-toast, .intro, .pixi-pt, .isl, .pixi-fx, .visit-sky, .st, .transmit')) return false;
+      const r = n.getBoundingClientRect(); return r.width >= 60 && r.height >= 12 && n.offsetParent !== null && (r.top > innerHeight * 0.4 || r.bottom < 0 || r.top < -40);   // somewhere you'll have to look for
+    });
+    if (!all.length) return false;
+    const n = all[Math.floor(Math.random() * all.length)];
+    anchor = null; hush(); feel('happy', 0); say('Hide and seek! Count to three…');
+    setTimeout(() => {
+      const r = n.getBoundingClientRect(), dx = clamp(Math.random() * Math.max(0, r.width - W), 0, Math.max(0, r.width - W)), top = r.top - H * 0.55;
+      teleport(clamp(r.left + dx, -W, innerWidth), top, () => {
+        anchor = { n, dx: new Spring(dx, { damping: 1, response: 0.9 }).on(queue), oy: -H * 0.55, keep: true };
+        el.classList.add('peek'); feel('happy', 0); seek = { t0: performance.now(), n };
+        dispatchEvent(new CustomEvent('br-activity', { detail: { id: 'seek', t0: Date.now() } }));
+        seek.look = setInterval(() => { lx.to((Math.random() - 0.5) * 2); ly.to(-0.6 + Math.random() * 0.4); if (Math.random() < 0.3) blink(); }, 1400);
+        seek.limit = setTimeout(() => seekEnd(false), 90000);
+      });
+    }, 1700);
+    return true;
+  }
+  function seekEnd(found) {
+    if (!seek) return; const s = seek; seek = null; clearInterval(s.look); clearTimeout(s.limit); el.classList.remove('peek');
+    const secs = Math.round((performance.now() - s.t0) / 1000); anchor = null;
+    dispatchEvent(new CustomEvent('br-activity', { detail: { id: 'seek', done: true, found, secs } }));
+    if (found) {
+      let best = +store.get('br-pixi-seek') || 0; const rec = !best || secs < best; if (rec) store.set('br-pixi-seek', secs);
+      feel('love', 1800); hop(18); chirp(3); fireworks(X.x + W / 2, floorTop() - floor - Y.x, 40);
+      say(`Found me! ${secs} s.${rec && best ? ' New record.' : ''}`); secret('seek');
+      setTimeout(() => !anchor && fall(), 2200);
+    } else {
+      const where = (s.n.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 28);
+      teleport(home(), floorTop() - floor - 0, () => { Y.set(0); say(where ? `I win. I was by “${where}”.` : 'I win. Next time.', { mood: 'wink' }); });
+    }
+  }
+  addEventListener('br-seek-giveup', () => seekEnd(false));
+
+  /* ---------- Pixi plays with the page: presses the time-lapse, writes a beat, turns the tuner, pours a coffee ---------- */
+  let pressCb = null;
+  function press(btn, f) { if (!btn || !usable(btn)) return false; pressCb = f; if (!visit(btn, 'press')) { pressCb = null; return false; } return true; }
+  function tinker() {
+    if (anchor || run || hang || dragging || tucked || hidden || seek || reduce() || (portrait && !portrait.done)) return false;
+    const lb = document.getElementById('lapse'), sky = document.getElementById('sky'), hrs = document.getElementById('hrs');
+    if (lb && sky && lb.textContent.trim() === 'Time-lapse' && hrs && +hrs.value === 0 && usable(lb)) {
+      return press(lb, () => { lb.click(); setTimeout(() => { anchor = null; visit(sky, 'watch'); setTimeout(() => quip('Watch them turn.', 'happy', 1, 'turn', true), 1100); }, 600);
+        setTimeout(() => { if (lb.textContent.trim() === 'Pause') { const nb = document.getElementById('nowBtn'); if (!press(nb, () => nb.click())) nb && nb.click(); } }, 11000); });
+    }
+    const play = document.getElementById('play'), pads = [...document.querySelectorAll('.seq-row button[aria-pressed="false"]')];
+    if (play && play.textContent.trim() === 'Play' && pads.length > 8) {
+      const seq = document.querySelector('.seq'); if (!seq || !usable(seq)) return false;
+      return press(seq, () => { const pick = pads.sort(() => Math.random() - 0.5).slice(0, 5);
+        pick.forEach((b, i) => setTimeout(() => { b.click(); nudge(b); squash(0.3); chirp(1); }, i * 240));
+        setTimeout(() => quip('Made you a beat. Press play.', 'happy', 1, 'beat', true), pick.length * 240 + 300); });
+    }
+    const stops = [...document.querySelectorAll('#stops button')];
+    if (stops.length && Math.random() < 0.6) { const b = stops[Math.floor(Math.random() * stops.length)]; return press(b, () => { b.click(); setTimeout(() => quip('Tuned in.', 'wink', 0.5, 'tune', true), 500); }); }
+    const cof = document.querySelector('.cof');
+    if (cof && Math.random() < 0.25) return press(cof, () => { cof.click(); setTimeout(() => quip('One for me.', 'happy', 1, 'mycup'), 900); });
+    return false;
+  }
+  // you start the time-lapse: Pixi comes to watch it with you
+  const lbtn = document.getElementById('lapse');
+  if (lbtn) lbtn.addEventListener('click', e => {
+    if (!e.isTrusted) return;
+    setTimeout(() => { if (lbtn.textContent.trim() !== 'Pause') return; const sky = document.getElementById('sky');
+      if (!anchor && !seek && !run) visit(sky, 'watch');
+      setTimeout(() => { if (lbtn.textContent.trim() === 'Pause') { secret('timelapse'); quip('Watch them turn.', 'happy', 1, 'turn', true); } }, 5000); }, 200);
+  });
+
   /* ---------- a life of its own ---------- */
   (function blinks() { setTimeout(() => { if (!document.hidden) blink(Math.random() < 0.2); blinks(); }, 2200 + Math.random() * 3800); })();
   (function idle() {
     setTimeout(() => {
       idle();
-      if (document.hidden || dragging || tucked || hidden || dancing || run || hang || hiddenFx || (portrait && !portrait.done)) return;
+      if (document.hidden || dragging || tucked || hidden || dancing || run || hang || hiddenFx || seek || (portrait && !portrait.done)) return;
+      if (Math.random() < 0.05 && performance.now() - surpriseAt > 30000) { surpriseAt = performance.now(); if (tinker()) return; }
       const quiet = performance.now() - lastAct;
       if (quiet > (slot().sleepy ? 20000 : 45000)) return sleep();
       if (asleep) return;
@@ -1078,5 +1193,5 @@
   feel(baseMood(), 0); queue();
   setInterval(() => { if (mood === 'default' || mood === 'tired') feel(baseMood(), 0); queue(); }, 60000);
   BR.pixi = { center: () => ({ x: X.x + W / 2, y: floorTop() - floor - Y.x + H / 2, held: dragging, away: tucked || hidden || hiddenFx }) };   // for the spacetime grid
-  window.__pixi = { drawPortrait, roam, visit, drop, say, perform, hangStart, eatDot, surprise, teleport, fireworks, sleep };                                        // handy from the console
+  window.__pixi = { hideSeek, tinker, secret, drawPortrait, roam, visit, drop, say, perform, hangStart, eatDot, surprise, teleport, fireworks, sleep };                                        // handy from the console
 })();

@@ -237,7 +237,7 @@
             <dl class="colo-grid">
               <div><dt class="label">Right now</dt><dd><i class="pres" data-pres-dot></i><span data-presence>In Colombo</span></dd><dd class="sm" data-clock-long>Colombo, Sri Lanka</dd></div>
               <div><dt class="label">Tonight over Colombo</dt><dd><a class="sky-link" href="offhours.html#tonight" data-sky>Sunset around 6 pm</a></dd><dd class="sm" data-moon></dd></div>
-              <div><dt class="label">Colophon</dt><dd>© 2026 Banuka Rajapaksha</dd><dd class="sm"><span data-updated>Hand-built</span> · no frameworks · 96 BPM</dd><dd class="sm" data-visit></dd></div>
+              <div><dt class="label">Colophon</dt><dd>© 2026 Banuka Rajapaksha</dd><dd class="sm"><span data-updated>Hand-built</span> · no frameworks · 96 BPM</dd><dd class="sm" data-visit></dd><dd class="sm" data-secrets></dd></div>
             </dl>
             <div class="colo-act"><button class="tool" type="button" data-share aria-label="Share this site" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 15V4M8 8l4-4 4 4M5 12v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg></button>
             <button class="tool top" type="button" data-top aria-label="Back to top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button></div>
@@ -379,7 +379,7 @@
   document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', wire) : wire();
 
   // moments (time-based features) and the hidden trail load on every page
-  ['moments.js', 'secret.js', 'extras.js', 'pixi.js', 'wow.js', 'details.js'].forEach(f => { const el = document.createElement('script'); el.src = 'assets/' + f + '?v=20261011r'; document.head.appendChild(el); });
+  ['moments.js', 'secret.js', 'extras.js', 'pixi.js', 'wow.js', 'details.js'].forEach(f => { const el = document.createElement('script'); el.src = 'assets/' + f + '?v=20261011s'; document.head.appendChild(el); });
 
   window.BR = { Spring, project, rubber, clamp, tracker, reduce, RM, blip, sound, ac, noiseBuf, nav, footer, store };
 })();
