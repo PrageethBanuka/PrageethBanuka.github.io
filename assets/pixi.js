@@ -128,6 +128,9 @@
   [X, Y, R, lx, ly, open, lid, tall, B, Q].forEach(s => s.on(queue));
   colors(); addEventListener('br-theme', () => requestAnimationFrame(colors));
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', colors);
+  const heart = (cx, cy, s) => { const k = s / 2; o.beginPath(); o.moveTo(cx, cy + k * 0.95);
+    o.bezierCurveTo(cx - k * 1.7, cy - k * 0.15, cx - k * 0.7, cy - k * 1.45, cx, cy - k * 0.45);
+    o.bezierCurveTo(cx + k * 0.7, cy - k * 1.45, cx + k * 1.7, cy - k * 0.15, cx, cy + k * 0.95); o.fill(); };
   const rr = (x, y, w, h, r) => { r = Math.max(0, Math.min(r, w / 2, h / 2)); o.beginPath(); o.roundRect ? o.roundRect(x, y, w, h, r) : o.rect(x, y, w, h); o.fill(); };
   function paint(now) {
     dirty = false;
@@ -144,9 +147,11 @@
       let ox = lx.x * 7, oy = ly.x * 4;
       if (dz) { ox += Math.cos(t * 14 + (sd > 0 ? 3.1 : 0)) * 3; oy += Math.sin(t * 14 + (sd > 0 ? 3.1 : 0)) * 2.4; }
       const grow = 1 + 0.18 * Math.max(0, sd * lx.x);                                  // curiosity: the eye on the look side grows
-      const w = ew * (mood === 'surprised' ? 0.85 : 1), h = Math.max(2.5, eh * grow * op * tall.x);
+      const w = ew * (mood === 'surprised' ? 0.85 : 1), h = mood === 'wink' && sd < 0 ? 2.5 : Math.max(2.5, eh * grow * op * tall.x);
       const x = W / 2 + sd * (gap / 2 + ew / 2) + ox - w / 2, y = H / 2 + oy - h / 2;
-      o.globalCompositeOperation = 'source-over'; o.fillStyle = '#000'; rr(x, y, w, h, 5);
+      o.globalCompositeOperation = 'source-over'; o.fillStyle = '#000';
+      if (mood === 'love' && !asleep) heart(x + w / 2, H / 2 + oy + 1, 21 * (1 + 0.08 * Math.sin(t * 10)) * clamp(op, 0.3, 1));   // a beating heart for each eye
+      else rr(x, y, w, h, 5);
       const L = lid.x; o.globalCompositeOperation = 'destination-out';
       if (L > 0.01 && !asleep) {
         if (mood === 'happy') rr(x - 2, y + h * (1 - 0.45 * L), w + 4, h, 5);
@@ -183,7 +188,7 @@
       for (let i = 0; i < 3; i++) { c.globalAlpha = i === k ? 1 : 0.35; c.fillStyle = K.ink; c.beginPath(); c.arc(W / 2 + (i - 1) * CELL * 1.5, H - CELL * 1.5, 1.3, 0, 6.283); c.fill(); }
       c.globalAlpha = 1; typingOn = true;
     } else typingOn = false;
-    if (dz || walking || typingOn) queue();
+    if (dz || walking || typingOn || run || mood === 'love') queue();
   }
 
   /* ---------- thoughts ---------- */
@@ -342,11 +347,12 @@
     g = { x0: e.clientX, y0: e.clientY, dx: e.clientX - X.x, dy: e.clientY - (floorTop() - floor - Y.x), moved: false };
     tx.reset(); ty.reset(); X.stop(); Y.stop();
     open.to(0.8); tall.to(0.92);                                                         // squish on press: instant feedback
+    const mine = g; g.hold = setTimeout(() => { if (g === mine && !g.moved) { g.long = true; feel('love', 2600); purr(); squash(0.4); quip('Hold me closer, tiny dancer.', null, 1, 'hold'); } }, 550);
   });
   el.addEventListener('pointermove', e => {
     if (!g) return;
     if (!g.moved && Math.hypot(e.clientX - g.x0, e.clientY - g.y0) < 8) return;
-    if (!g.moved) { g.moved = dragging = true; hush(); wake(true); feel('surprised', 0); if (tucked) { tucked = false; store.set('br-pixi', ''); } }
+    if (!g.moved) { clearTimeout(g.hold); if (g.long) return; g.moved = dragging = true; hush(); wake(true); feel('surprised', 0); if (tucked) { tucked = false; store.set('br-pixi', ''); } }
     let nx = e.clientX - g.dx; const lo = 4, hi = innerWidth - W - 4;
     if (nx < lo) nx = lo + rubber(nx - lo, innerWidth); if (nx > hi) nx = hi + rubber(nx - hi, innerWidth);
     let top = e.clientY - g.dy, h = floorTop() - floor - top;
@@ -360,7 +366,8 @@
     R.to(clamp(tx.vel() / 90, -18, 18));
   });
   const up = e => {
-    if (!g) return; const moved = g.moved; g = null; dragging = false; open.to(1);
+    if (!g) return; const moved = g.moved, long = g.long; clearTimeout(g.hold); g = null; dragging = false; open.to(1);
+    if (long) { tall.to(1); return; }
     if (!moved) { tall.to(1); return tap(); }
     const vx = tx.vel(), vy = ty.vel(), speed = Math.hypot(vx, vy);
     if (Y.x < -18 || (vy > 900 && Y.x < 40)) return tuck(vy);
@@ -380,7 +387,9 @@
   function tap() {
     if (tucked) { untuck(); return; }
     if (asleep) { wake(true); setTimeout(() => say(SAY.wake), 400); return; }
-    const now = performance.now(); pokes = pokes.filter(t => now - t < 2500); pokes.push(now);
+    const now = performance.now();
+    if (pokes.length && now - pokes[pokes.length - 1] < 320 && !reduce()) { pokes.push(now); hush(); return flip(); }   // double tap: backflip
+    pokes = pokes.filter(t => now - t < 2500); pokes.push(now);
     if (pokes.length >= 5) { pokes = []; hop(8); return say(SAY.poke, { mood: 'angry' }); }
     if (bub.style.visibility === 'visible' && now - saidAt < 600) return;
     hop(); feel('happy', 1400); say(next());
@@ -567,9 +576,109 @@
     tiredAt = performance.now(); feel('tired', 0); ly.to(0.8);
     let n = 0; const pant = setInterval(() => { squash(0.5); if (++n > 9) clearInterval(pant); }, 200);   // out of breath
     setTimeout(() => say('Okay. Cardio done. For the year.', { mood: 'tired' }), 400);
-    setTimeout(() => { if (!dragging && !run) fall(); }, 3200);
+    setTimeout(() => { if (!dragging && !run) { fall(); if (Math.random() < 0.6) hiccups(); } }, 3200);
   }
   function fall() { if (dragging) return; Y.to(0, { damping: 0.5, response: 0.45, then: () => { feel(baseMood(), 0); setTimeout(() => !anchor && !run && walkTo(home()), 900); } }); }
+
+
+  /* ---------- personality: little tricks ---------- */
+  // speech budget for reactions: one quip every 12 s at most, each kind once per visit unless it says otherwise
+  let quipAt = -Infinity; const quipped = new Set();
+  function quip(text, m, chance = 1, key = text, again = false) {
+    if (dragging || tucked || hidden || (!again && quipped.has(key)) || Math.random() > chance) return false;
+    if (performance.now() - quipAt < 12000) return false;
+    quipAt = performance.now(); quipped.add(key); return say(text, m ? { mood: m } : {});
+  }
+  function flip() {                                                                       // a backflip, from wherever it is
+    feel('happy', 1200); B.to(0, { velocity: 260 }); chirp(3);
+    R.to(R.x - 360, { damping: 1, response: 0.55, then: () => R.set(0) });
+    setTimeout(() => quip('Ta-da.', 'wink', 0.6, 'flip', true), 600);
+  }
+  function waveBye() { let n = 0; const iv = setInterval(() => { R.to(n % 2 ? -10 : 10, { damping: 0.6, response: 0.15 }); if (++n > 5) { clearInterval(iv); R.to(0); } }, 160); hop(8); }
+  function sneeze() { open.to(0.15, { then: () => setTimeout(() => { open.to(1.2, { velocity: 10 }); kick(1.2); squash(-1); chirp(1); quip('Achoo. Dust in the circuits.', null, 0.7, 'sneeze'); }, 380) }); }
+  function hiccups(n = 3) { for (let i = 0; i < n; i++) setTimeout(() => { if (!dragging && !run) { kick(0.5); open.to(1.15, { velocity: 6 }); chirp(1); } }, 1400 + i * (900 + Math.random() * 900)); }
+
+  /* ---------- reading the visitor ---------- */
+  // circles around it: it gets dizzy
+  let spinA = 0, spinPrev = null, spinT = 0;
+  addEventListener('pointermove', e => {
+    if (e.pointerType === 'touch' || dragging || asleep || tucked) return;
+    const cx = X.x + W / 2, cy = floorTop() - floor - Y.x + H / 2, dx = e.clientX - cx, dy = e.clientY - cy, d = Math.hypot(dx, dy), t = performance.now();
+    if (d > 240 || t - spinT > 600) { spinA = 0; spinPrev = null; }
+    spinT = t; if (d < 20) return; const a = Math.atan2(dy, dx);
+    if (spinPrev !== null) { let da = a - spinPrev; if (da > Math.PI) da -= 2 * Math.PI; if (da < -Math.PI) da += 2 * Math.PI; spinA += da; }
+    spinPrev = a;
+    if (Math.abs(spinA) > Math.PI * 4) { spinA = 0; dizzyUntil = t + 1800; queue(); R.to(Math.sign(spinA || 1) * 12, { then: () => R.to(0) }); quip('Stop. The room is spinning.', 'surprised', 1, 'circles', true); }
+  }, { passive: true });
+
+  // laser pointer: jiggle the cursor near it and it crouches, then pounces
+  let jig = [], pounceAt = 0;
+  addEventListener('pointermove', e => {
+    if (e.pointerType === 'touch' || dragging || asleep || tucked || anchor || run || dancing || reduce()) return;
+    const t = performance.now(), cy = floorTop() - floor - Y.x + H / 2;
+    if (Math.abs(e.clientY - cy) > 180 || Math.abs(e.clientX - (X.x + W / 2)) > 320) { jig = []; return; }
+    jig.push({ x: e.clientX, t }); jig = jig.filter(p => t - p.t < 700);
+    let flips = 0; for (let i = 2; i < jig.length; i++) if ((jig[i].x - jig[i - 1].x) * (jig[i - 1].x - jig[i - 2].x) < 0) flips++;
+    if (flips >= 5 && t - pounceAt > 6000) {
+      pounceAt = t; jig = []; const tx0 = clamp(e.clientX - W / 2, PAD, maxX());
+      feel('angry', 900); Q.to(0.5, { damping: 1, response: 0.2 }); lx.to(Math.sign(tx0 - X.x) || 1);                    // crouch, eyes narrowed
+      setTimeout(() => { Q.to(0, { velocity: -14 }); B.to(0, { velocity: 320 }); X.to(tx0, { damping: 0.9, response: 0.35 }); chirp(2); setTimeout(() => quip('Got it. Probably.', 'happy', 0.5, 'pounce', true), 500); }, 380);
+    }
+  }, { passive: true });
+
+  // rage clicks
+  let clicks = [];
+  document.addEventListener('pointerdown', e => {
+    if (e.target.closest('.pixi')) return; const t = performance.now();
+    clicks.push({ x: e.clientX, y: e.clientY, t }); clicks = clicks.filter(c => t - c.t < 900 && Math.hypot(c.x - e.clientX, c.y - e.clientY) < 50);
+    if (clicks.length >= 4) { clicks = []; feel('surprised', 900); quip('Easy. It’s a website, not a vending machine.', null, 1, 'rage'); }
+  }, { passive: true });
+
+  // words it knows (typed anywhere outside a text field)
+  let typed = '';
+  addEventListener('keydown', e => {
+    if (e.key.length !== 1 || e.metaKey || e.ctrlKey || e.altKey || e.target.closest('input, textarea, select, [contenteditable]')) return;
+    typed = (typed + e.key.toLowerCase()).slice(-12);
+    if (!asleep && !tucked && !anchor) { squash(0.15); ly.to(0.9); }                                     // it watches you type
+    if (typed.endsWith('pixi')) { typed = ''; wake(true); hop(16); feel('love', 1600); quip('That’s me!', null, 1, 'name', true); }
+    else if (typed.endsWith('dance')) { typed = ''; wake(true); let n = 0; const iv = setInterval(() => { kick(0.8); swing = -swing; R.to(10 * swing); if (++n >= 16) { clearInterval(iv); R.to(0); } }, 312); feel('happy', 5200); }
+    else if (typed.endsWith('flip')) { typed = ''; flip(); }
+    else if (typed.endsWith('sleep')) { typed = ''; setTimeout(sleep, 300); }
+    else if (typed.endsWith('hello') || typed.endsWith(' hi')) { typed = ''; waveBye(); quip('Hi! Hello. Hey.', 'happy', 1, 'hello', true); }
+  });
+
+  // what visitors do with the page
+  document.addEventListener('copy', () => { feel('love', 1400); quip('Copied. I’m flattered.', null, 1, 'copy'); });
+  document.addEventListener('contextmenu', () => quip('Inspecting me? It’s all springs in here.', 'wink', 1, 'inspect'));
+  addEventListener('offline', () => { feel('surprised', 1500); quip('Lost signal. Ironic, for this site.', null, 1, 'offline', true); });
+  addEventListener('online', () => { hop(); quip('Signal’s back.', 'happy', 1, 'online', true); });
+  document.addEventListener('mouseout', e => {                                                  // pointer heading for the tabs: wave goodbye
+    if (e.relatedTarget || e.clientY > 2 || asleep || tucked) return;
+    if (quip('Leaving? Bye. Come back sometime.', 'happy', 1, 'bye')) waveBye();
+  });
+  document.addEventListener('click', e => { if (e.target.closest('[data-sound-toggle]') && BR.sound.on) setTimeout(() => { chirp(3); quip('Oh. I have a voice now.', 'happy', 1, 'voice'); }, 300); });
+  document.addEventListener('pointerover', e => {                                               // the contact buttons get heart eyes
+    if (e.target.closest && e.target.closest('[data-wa-open], [data-copy], .email') && !asleep && !tucked) { feel('love', 1300); quip('Yes. That one.', null, 0.5, 'contact'); }
+  });
+  let deep = 0;
+  addEventListener('scroll', () => {
+    deep = Math.max(deep, scrollY);
+    if (scrollY < 10 && deep > innerHeight * 2.5) { deep = 0; ly.to(-1); quip('Back to the top. Classic.', null, 0.7, 'top'); }
+  }, { passive: true });
+  if (navigator.getBattery) navigator.getBattery().then(b => { const chk = () => { if (b.level < 0.2 && !b.charging) setTimeout(() => quip(`Your battery’s at ${Math.round(b.level * 100)}%. Mine runs on coffee.`, 'tired', 1, 'battery'), 20000); }; chk(); b.addEventListener('levelchange', chk); }).catch(() => {});
+  // late night, light mode: squint
+  setTimeout(() => {
+    const h = clock().h, light = root.dataset.theme ? root.dataset.theme === 'light' : !matchMedia('(prefers-color-scheme: dark)').matches;
+    if ((h >= 22 || h < 5) && light && !root.dataset.mode) { open.to(0.4, { then: () => setTimeout(() => open.to(1), 800) }); quip('It’s late and you’re in light mode? Brave.', 'tired', 1, 'latelight'); }
+  }, 16000);
+  // long visits and returning visitors
+  setTimeout(() => quip('Five minutes here already. Coffee break?', 'happy', 1, 'five'), 300000);
+  let visits = 0; try { const d = new Date().toDateString(), v = JSON.parse(store.get('br-pixi-visits') || '{}'); visits = v.d === d ? v.n : 0; if (!sessionStorage.getItem('br-pixi-v')) { visits++; store.set('br-pixi-visits', JSON.stringify({ d, n: visits })); sessionStorage.setItem('br-pixi-v', '1'); } } catch (e) {}
+  if (visits >= 3) setTimeout(() => quip(`Visit number ${visits} today. We should stop meeting like this.`, 'wink', 1, 'visits'), 11000);
+  // tucked away, it still peeks around now and then
+  setInterval(() => { if (tucked && !document.hidden) { lx.to((Math.random() - 0.5) * 2); setTimeout(() => lx.to(0), 900); } }, 4000);
+  // tap the speech bubble to dismiss: it sulks for a second
+  bub.addEventListener('click', () => { if (Math.random() < 0.3) feel('tired', 900); });
 
   /* ---------- a life of its own ---------- */
   (function blinks() { setTimeout(() => { if (!document.hidden) blink(Math.random() < 0.2); blinks(); }, 2200 + Math.random() * 3800); })();
@@ -584,7 +693,7 @@
       const r = Math.random();
       if (anchor) { if (r < 0.3) shuffle(); else if (r < 0.5) { drop(); } else if (r < 0.62) visit(roamPick(), 'roam') || lookAround(); else if (r < 0.8) lookAround(); else muse(); return; }
       if (r < 0.14 && performance.now() - roamAt > 15000) { roam(); return; }
-      if (r > 0.94) return (mood === 'tired' ? yawn : Math.random() < 0.5 ? peekOut : stretch)();
+      if (r > 0.94) return (mood === 'tired' ? yawn : Math.random() < 0.15 ? sneeze : Math.random() < 0.5 ? peekOut : stretch)();
       if (r < 0.32) lookAround();
       else if (r < 0.52 && !reduce()) wander();
       else if (r < 0.62) hop(10);
