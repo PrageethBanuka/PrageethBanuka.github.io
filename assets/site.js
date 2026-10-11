@@ -232,12 +232,16 @@
             <button class="btn" type="button" data-wa-open><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 12a8 8 0 0 1-11.6 7.1L4 20l1-4.2A8 8 0 1 1 20 12z"/></svg>WhatsApp me</button>
             <span class="label" data-copy-note aria-live="polite"></span>
           </div>
-          <div class="foot">
-            <span class="label">© 2026 Banuka Rajapaksha · v.2026</span>
-            <span class="label" data-clock-long>Colombo, Sri Lanka</span>
-            <span class="label">Coffee runs through my circuits ☕</span>
+          <div class="colo">
+            <div class="sign"><span class="sig sig-xl" role="img" aria-label="Signed, Prageeth" style="view-transition-name:none"></span></div>
+            <dl class="colo-grid">
+              <div><dt class="label">Right now</dt><dd><i class="pres" data-pres-dot></i><span data-presence>In Colombo</span></dd><dd class="sm" data-clock-long>Colombo, Sri Lanka</dd></div>
+              <div><dt class="label">Tonight over Colombo</dt><dd><a class="sky-link" href="offhours.html#tonight" data-sky>Sunset around 6 pm</a></dd><dd class="sm" data-moon></dd></div>
+              <div><dt class="label">Colophon</dt><dd>© 2026 Banuka Rajapaksha</dd><dd class="sm"><span data-updated>Hand-built</span> · no frameworks · 96 BPM</dd><dd class="sm" data-visit></dd></div>
+            </dl>
+            <div class="colo-act"><button class="tool" type="button" data-share aria-label="Share this site" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 15V4M8 8l4-4 4 4M5 12v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg></button>
+            <button class="tool top" type="button" data-top aria-label="Back to top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button></div>
           </div>
-          <span class="sig sig-xl" role="img" aria-label="Signed, Prageeth" style="view-transition-name:none"></span>
         </div>
       </div></div></footer>`;
     document.currentScript.insertAdjacentHTML('beforebegin', `
@@ -338,6 +342,32 @@
       document.querySelectorAll('[data-clock-long]').forEach(e => { e.textContent = `My local time · ${s} · UTC+5:30`; });
     };
     tick(); setInterval(tick, 20000); window.addEventListener('br-moments', tick);
+    // footer: where I probably am, tonight's sky over Colombo, when the site last changed
+    const LAT = 6.7951, LON = 79.9008, rad = Math.PI / 180, hhmm = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Colombo' });
+    function sunset(now) {                                                  // the sunrise equation, good to a minute or two
+      const d = Math.floor(now / 864e5) + 0.5 - 10957 + 0.0008, J = d - LON / 360;
+      const M = (357.5291 + 0.98560028 * J) % 360, C = 1.9148 * Math.sin(M * rad) + 0.02 * Math.sin(2 * M * rad) + 0.0003 * Math.sin(3 * M * rad);
+      const L = (M + C + 282.9372) % 360, Jt = J + 0.0053 * Math.sin(M * rad) - 0.0069 * Math.sin(2 * L * rad);
+      const dec = Math.asin(Math.sin(L * rad) * Math.sin(23.44 * rad)), w = Math.acos((Math.sin(-0.833 * rad) - Math.sin(LAT * rad) * Math.sin(dec)) / (Math.cos(LAT * rad) * Math.cos(dec))) / rad;
+      return (Jt + w / 360 + 10957) * 864e5;
+    }
+    function live() {
+      const now = Date.now(), p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { hour: 'numeric', weekday: 'short', hourCycle: 'h23', timeZone: 'Asia/Colombo' }).formatToParts(new Date()).map(x => [x.type, x.value]));
+      const h = +p.hour, wk = p.weekday === 'Sat' || p.weekday === 'Sun';
+      const [txt, on] = h < 6 ? ['Asleep, probably', false] : h < 9 ? ['Brewing coffee, probably', true] : h < 18 ? (wk ? ['Off today, probably designing', true] : ['At WSO2, probably', true]) : h < 20 ? ['Winding down', true] : ['Up late, maybe under the sky', true];
+      document.querySelectorAll('[data-presence]').forEach(e => { e.textContent = txt; });
+      document.querySelectorAll('[data-pres-dot]').forEach(e => e.classList.toggle('on', on));
+      const ss = sunset(now), dark = ss + 72 * 60e3, after = now > dark || h < 5;
+      const ph = (((now - Date.UTC(2000, 0, 6, 18, 14)) / 864e5) % 29.530588853 + 29.530588853) % 29.530588853 / 29.530588853, ill = Math.round((1 - Math.cos(ph * 2 * Math.PI)) / 2 * 100);
+      document.querySelectorAll('[data-sky]').forEach(e => { e.textContent = after ? 'Dark sky now' : `Sunset ${hhmm.format(ss)} · dark by ${hhmm.format(dark)}`; });
+      document.querySelectorAll('[data-moon]').forEach(e => { e.textContent = ill < 4 ? 'New Moon · best for stars' : `Moon ${ill}% · ${ill > 85 ? 'too bright for faint stars' : ph < 0.5 ? 'waxing' : 'waning'}`; });
+    }
+    live(); setInterval(live, 60000);
+    const lm = new Date(document.lastModified);
+    if (!isNaN(lm)) document.querySelectorAll('[data-updated]').forEach(e => { e.textContent = 'Updated ' + lm.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); });
+    // native share sheet where the device has one (phones, mostly)
+    if (navigator.share) document.querySelectorAll('[data-share]').forEach(b => { b.hidden = false; b.addEventListener('click', () => { navigator.share({ title: 'Banuka Rajapaksha', text: 'Coffee runs through my circuits.', url: location.origin + location.pathname }).catch(() => {}); }); });
+    document.querySelectorAll('[data-top]').forEach(b => b.addEventListener('click', () => { scrollTo({ top: 0, behavior: reduce() ? 'auto' : 'smooth' }); blip('tick'); }));
     document.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', () => {
       const em = document.querySelector('[data-email]'), note = document.querySelector('[data-copy-note]');
       const ok = () => { note.textContent = 'Copied'; blip('tone'); };
@@ -349,7 +379,7 @@
   document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', wire) : wire();
 
   // moments (time-based features) and the hidden trail load on every page
-  ['moments.js', 'secret.js', 'extras.js', 'pixi.js', 'wow.js', 'details.js'].forEach(f => { const el = document.createElement('script'); el.src = 'assets/' + f + '?v=20261011q'; document.head.appendChild(el); });
+  ['moments.js', 'secret.js', 'extras.js', 'pixi.js', 'wow.js', 'details.js'].forEach(f => { const el = document.createElement('script'); el.src = 'assets/' + f + '?v=20261011r'; document.head.appendChild(el); });
 
   window.BR = { Spring, project, rubber, clamp, tracker, reduce, RM, blip, sound, ac, noiseBuf, nav, footer, store };
 })();

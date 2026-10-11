@@ -186,8 +186,20 @@ button { font: inherit; color: inherit; }
 .tx-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .email { display: inline-flex; align-items: center; gap: 6px; padding: 6px 6px 6px 18px; border: 1px solid var(--line); border-radius: 999px; font-family: var(--f-mono); font-size: 0.95rem; max-width: 100%; }
 .email span { user-select: all; overflow-wrap: anywhere; }
-.foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px 24px; padding-top: 72px; }
-.foot .label { color: var(--ink-3); }
+/* colophon: signature, three small live notes, back to top. One row, no empty band. */
+.colo { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 24px clamp(24px, 4vw, 56px); align-items: end; padding-top: clamp(56px, 7vw, 88px); }
+.colo .sig-xl { width: clamp(130px, 13vw, 190px); margin: 0; }
+.colo-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px 28px; margin: 0; }
+.colo-grid dt { color: var(--ink-3); margin-bottom: 6px; }
+.colo-grid dd { margin: 0; font-size: 0.92rem; line-height: 1.45; color: var(--ink); }
+.colo-grid dd.sm { font-family: var(--f-mono); font-size: 0.66rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); margin-top: 4px; }
+.colo-grid dd.sm:empty { display: none; }
+.colo-act { display: flex; gap: 6px; }
+.sky-link { color: inherit; text-decoration: none; background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px no-repeat; transition: background-size var(--h) var(--ease-out); }
+.sky-link:hover { background-size: 100% 1px; }
+.sky-link::after { content: " ↗"; color: var(--ink-3); font-size: .85em; }
+.pres { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 8px; vertical-align: 0.08em; background: var(--ink-3); }
+.pres.on { background: var(--data); box-shadow: 0 0 0 3px color-mix(in srgb, var(--data) 18%, transparent); }
 
 /* shared trace hairline used as section divider */
 .trace-line { display: block; width: 100%; height: 24px; color: var(--ink-3); }
@@ -266,8 +278,16 @@ body.menu-open .nav::after { opacity: 0; }
   .tx-row { gap: 8px; }
   .tx-row .email { width: 100%; justify-content: space-between; }
   .tx-row .btn { flex: 1 1 0; justify-content: center; }
-  .foot { flex-direction: column; gap: 8px; padding-top: 44px; }
-  .sig-xl { margin-top: 32px; width: 150px; }
+  .colo { grid-template-columns: 1fr auto; padding-top: 40px; gap: 28px 16px; }
+  .colo-grid { grid-column: 1 / -1; order: -1; grid-template-columns: 1fr 1fr; gap: 18px 16px; }
+  .colo-grid > div:last-child { grid-column: 1 / -1; }
+  .colo .sig-xl { width: 116px; }
+  /* contact: email, then WhatsApp as the one primary action, then the three links in a single quiet row */
+  .tx-row .email { order: 0; }
+  .tx-row [data-wa-open] { order: 1; flex: 1 1 100%; min-height: 48px; }
+  .tx-row .btn.ghost { order: 2; flex: 1 1 0; min-width: 0; padding-inline: 8px; font-size: 0.88rem; }
+  .tx-row .btn.ghost .arr { display: none; }
+  .tx-row [data-copy-note] { order: 3; }
   .lede { font-size: 1.12rem; }
   .brand { gap: 10px; }
   .sig { width: 58px; }
@@ -375,6 +395,8 @@ details.more[open] > summary { margin-bottom: 14px; }
   .scope .rd.b { display: none; }
   .now { gap: 0; }
   .now article { padding-block: 18px 22px; gap: 8px; }
+  .now article:first-child { border-top: 0; padding-top: 0; }                   /* the section rule above already separates it */
+  figure.redphoto { max-width: 280px; }
   .now article > p { display: none; }
   .now .big { font-size: 3.2rem; }
 

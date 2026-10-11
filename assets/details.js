@@ -95,8 +95,8 @@
     const STARS = Array.from({ length: 40 }, () => ({ x: 0.5 + rnd() * 0.46, y: 0.035 + rnd() * 0.16, m: rnd() }));   // a quiet band above the headline, right side
     const cv = document.createElement('canvas'); cv.className = 'visit-sky'; cv.setAttribute('aria-hidden', 'true'); foot.prepend(cv);
     const c = cv.getContext('2d'); let FW = 0, FH = 0, shown = 0, born = [], raf = 0;
-    const note = document.createElement('span'); note.className = 'label visit-note';
-    const fr = foot.querySelector('.foot'); fr && fr.appendChild(note);
+    const note = document.createElement('span'); note.className = 'visit-note';
+    const fr = foot.querySelector('[data-visit]'); fr && fr.appendChild(note);
     const size = () => { const d = Math.min(2, devicePixelRatio || 1); FW = foot.clientWidth; FH = foot.clientHeight; cv.width = FW * d; cv.height = FH * d; c.setTransform(d, 0, 0, d, 0, 0); draw(performance.now()); };
     const count = () => Math.min(STARS.length, Math.floor(ms / 30000));
     function draw(t) {
